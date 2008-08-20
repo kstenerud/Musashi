@@ -30,6 +30,9 @@
 #ifndef M68K__HEADER
 #define M68K__HEADER
 
+#ifndef ARRAY_LENGTH
+#define ARRAY_LENGTH(x)         (sizeof(x) / sizeof(x[0]))
+#endif
 
 /* ======================================================================== */
 /* ============================= CONFIGURATION ============================ */
@@ -312,6 +315,12 @@ void m68k_end_timeslice(void);          /* End timeslice now */
  */
 void m68k_set_irq(unsigned int int_level);
 
+/* Set the virtual irq lines, where the highest level
+ * active line is automatically selected.  If you use this function,
+ * do not use m68k_set_irq.
+ */
+void m68k_set_virq(unsigned int level, unsigned int active);
+unsigned int m68k_get_virq(unsigned int level);
 
 /* Halt the CPU as if you pulsed the HALT pin. */
 void m68k_pulse_halt(void);
