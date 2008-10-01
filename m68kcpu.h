@@ -910,6 +910,7 @@ typedef struct
 
 	/* Virtual IRQ lines state */
 	uint virq_state;
+	uint nmi_pending;
 
 	const uint8* cyc_instruction;
 	const uint8* cyc_exception;
@@ -2052,7 +2053,12 @@ void m68ki_exception_interrupt(uint int_level)
 /* ASG: Check for interrupts */
 INLINE void m68ki_check_interrupts(void)
 {
-	if(CPU_INT_LEVEL > FLAG_INT_MASK)
+	if(m68ki_cpu.nmi_pending)
+	{
+		m68ki_cpu.nmi_pending = FALSE;
+		m68ki_exception_interrupt(7);
+	}
+	else if(CPU_INT_LEVEL > FLAG_INT_MASK)
 		m68ki_exception_interrupt(CPU_INT_LEVEL>>8);
 }
 
