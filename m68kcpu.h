@@ -141,6 +141,7 @@ extern "C" {
 /* ======================================================================== */
 
 /* Exception Vectors handled by emulation */
+#define EXCEPTION_RESET                    0
 #define EXCEPTION_BUS_ERROR                2 /* This one is not emulated! */
 #define EXCEPTION_ADDRESS_ERROR            3 /* This one is partially emulated (doesn't stack a proper frame yet) */
 #define EXCEPTION_ILLEGAL_INSTRUCTION      4
@@ -940,6 +941,7 @@ typedef struct
 
 extern m68ki_cpu_core m68ki_cpu;
 extern sint           m68ki_remaining_cycles;
+extern uint	      m68ki_reset_cycles;
 extern uint           m68ki_tracing;
 extern const uint8    m68ki_shift_8_table[];
 extern const uint16   m68ki_shift_16_table[];

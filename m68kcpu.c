@@ -53,6 +53,7 @@ extern void m68ki_build_opcode_table(void);
 
 int  m68ki_initial_cycles;
 int  m68ki_remaining_cycles = 0;                     /* Number of clocks remaining */
+uint m68ki_reset_cycles;
 uint m68ki_tracing = 0;
 uint m68ki_address_space;
 
@@ -125,13 +126,13 @@ const uint m68ki_shift_32_table[65] =
 const uint8 m68ki_exception_cycle_table[4][256] =
 {
 	{ /* 000 */
-		  4, /*  0: Reset - Initial Stack Pointer                      */
+		 40, /*  0: Reset - Initial Stack Pointer                      */
 		  4, /*  1: Reset - Initial Program Counter                    */
 		 50, /*  2: Bus Error                             (unemulated) */
 		 50, /*  3: Address Error                         (unemulated) */
 		 34, /*  4: Illegal Instruction                                */
-		 38, /*  5: Divide by Zero -- ASG: changed from 42             */
-		 40, /*  6: CHK -- ASG: chanaged from 44                       */
+		 38, /*  5: Divide by Zero                                     */
+		 40, /*  6: CHK                                                */
 		 34, /*  7: TRAPV                                              */
 		 34, /*  8: Privilege Violation                                */
 		 34, /*  9: Trace                                              */
@@ -157,7 +158,7 @@ const uint8 m68ki_exception_cycle_table[4][256] =
 		 44, /* 29: Level 5 Interrupt Autovector                       */
 		 44, /* 30: Level 6 Interrupt Autovector                       */
 		 44, /* 31: Level 7 Interrupt Autovector                       */
-		 34, /* 32: TRAP #0 -- ASG: chanaged from 38                   */
+		 34, /* 32: TRAP #0                                            */
 		 34, /* 33: TRAP #1                                            */
 		 34, /* 34: TRAP #2                                            */
 		 34, /* 35: TRAP #3                                            */
@@ -198,7 +199,7 @@ const uint8 m68ki_exception_cycle_table[4][256] =
 		  4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
 	},
 	{ /* 010 */
-		  4, /*  0: Reset - Initial Stack Pointer                      */
+		 40, /*  0: Reset - Initial Stack Pointer                      */
 		  4, /*  1: Reset - Initial Program Counter                    */
 		126, /*  2: Bus Error                             (unemulated) */
 		126, /*  3: Address Error                         (unemulated) */
@@ -780,6 +781,15 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 /* ASG: removed per-instruction interrupt checks */
 int m68k_execute(int num_cycles)
 {
+	/* eat up any reset cycles */
+	if (m68ki_reset_cycles) {
+	    int rc = m68ki_reset_cycles;
+	    m68ki_reset_cycles = 0;
+	    num_cycles -= rc;
+	    if (num_cycles <= 0)
+		return rc;
+	}
+
 	/* Set our pool of clock cycles available */
 	SET_CYCLES(num_cycles);
 	m68ki_initial_cycles = num_cycles;
@@ -948,6 +958,8 @@ void m68k_pulse_reset(void)
 	m68ki_jump(REG_PC);
 
 	CPU_RUN_MODE = RUN_MODE_NORMAL;
+
+	m68ki_reset_cycles = CYC_EXCEPTION[EXCEPTION_RESET];
 }
 
 /* Pulse the HALT line on the CPU */
