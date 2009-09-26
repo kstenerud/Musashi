@@ -76,7 +76,11 @@ const char *const m68ki_cpu_names[] =
 m68ki_cpu_core m68ki_cpu = {0};
 
 #if M68K_EMULATE_ADDRESS_ERROR
+#ifdef _BSD_SETJMP_H
+sigjmp_buf m68ki_aerr_trap;
+#else
 jmp_buf m68ki_aerr_trap;
+#endif
 #endif /* M68K_EMULATE_ADDRESS_ERROR */
 
 uint    m68ki_aerr_address;

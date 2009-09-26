@@ -577,6 +577,30 @@ extern "C" {
 #if M68K_EMULATE_ADDRESS_ERROR
 	#include <setjmp.h>
 
+/* sigjmp() on Mac OS X and *BSD in general saves signal contexts and is super-slow, use sigsetjmp() to tell it not to */
+#ifdef _BSD_SETJMP_H
+extern sigjmp_buf m68ki_aerr_trap;
+#define m68ki_set_address_error_trap(m68k) \
+	if(sigsetjmp(m68ki_aerr_trap, 0) != 0) \
+	{ \
+		m68ki_exception_address_error(m68k); \
+		if(m68ki_stopped) \
+		{ \
+			if (m68ki_remaining_cycles > 0) \
+				m68ki_remaining_cycles = 0; \
+			return m68ki_initial_cycles; \
+		} \
+	}
+
+#define m68ki_check_address_error(ADDR, WRITE_MODE, FC) \
+	if((ADDR)&1) \
+	{ \
+		m68ki_aerr_address = ADDR; \
+		m68ki_aerr_write_mode = WRITE_MODE; \
+		m68ki_aerr_fc = FC; \
+		siglongjmp(m68ki_aerr_trap, 1); \
+	}
+#else
 extern jmp_buf m68ki_aerr_trap;
 	#define m68ki_set_address_error_trap() \
 		if(setjmp(m68ki_aerr_trap) != 0) \
@@ -604,6 +628,7 @@ extern jmp_buf m68ki_aerr_trap;
 			m68ki_aerr_fc = FC; \
 			longjmp(m68ki_aerr_trap, 1); \
 		}
+#endif
 
 	#define m68ki_check_address_error_010_less(ADDR, WRITE_MODE, FC) \
 		if (CPU_TYPE_IS_010_LESS(CPU_TYPE)) \
