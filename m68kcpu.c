@@ -76,11 +76,7 @@ const char *const m68ki_cpu_names[] =
 m68ki_cpu_core m68ki_cpu = {0};
 
 #if M68K_EMULATE_ADDRESS_ERROR
-#ifdef _BSD_SETJMP_H
-sigjmp_buf m68ki_aerr_trap;
-#else
 jmp_buf m68ki_aerr_trap;
-#endif
 #endif /* M68K_EMULATE_ADDRESS_ERROR */
 
 uint    m68ki_aerr_address;
@@ -715,8 +711,9 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 			CYC_RESET        = 132;
 			return;
 		case M68K_CPU_TYPE_SCC68070:
-			m68k_set_cpu_type(M68K_CPU_TYPE_68000);
+			m68k_set_cpu_type(M68K_CPU_TYPE_68010);
 			CPU_ADDRESS_MASK = 0xffffffff;
+			CPU_TYPE         = CPU_TYPE_SCC070;
 			return;
 		case M68K_CPU_TYPE_68010:
 			CPU_TYPE         = CPU_TYPE_010;
