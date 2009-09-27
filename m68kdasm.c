@@ -3014,7 +3014,7 @@ static void d68020_unpk_mm(void)
 static void d68030_pmove(void)
 {
 	char* str;
-	UINT16 modes = read_imm_16();
+	uint modes = read_imm_16();
 
 	// do this after fetching the second PMOVE word so we properly get the 3rd if necessary
 	str = get_ea_mode_str_32(g_cpu_ir);

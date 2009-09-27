@@ -1,7 +1,7 @@
                                     MUSASHI
                                     =======
 
-                                  Version 3.4
+                                  Version 4.10
 
              A portable Motorola M680x0 processor emulation engine.
             Copyright 1998-2002 Karl Stenerud.  All rights reserved.
@@ -11,9 +11,9 @@
 INTRODUCTION:
 ------------
 
-Musashi is a Motorola 68000, 68010, 68EC020, 68020 and 68040 emulator written
-in C.  This emulator was written with two goals in mind: portability and
-speed.
+Musashi is a Motorola 68000, 68010, 68EC020, 68020, 68EC030, 68030, 68EC040 and
+68040 emulator written in C.  This emulator was written with two goals in mind:
+portability and speed.
 
 The emulator is written to ANSI C89 specifications.  It also uses inline
 functions, which are C9X compliant.
@@ -213,9 +213,12 @@ To set the CPU type you want to use:
     M68K_CPU_TYPE_68000,
     M68K_CPU_TYPE_68010,
     M68K_CPU_TYPE_68EC020,
-    M68K_CPU_TYPE_68020
-
-
+    M68K_CPU_TYPE_68020,
+    M68K_CPU_TYPE_68EC030,
+    M68K_CPU_TYPE_68030,
+    M68K_CPU_TYPE_68EC040,
+    M68K_CPU_TYPE_68040,
+    M68K_CPU_TYPE_SCC68070 (which is a 68010 with a 32 bit data bus).
 
 CLOCK FREQUENCY:
 ---------------
