@@ -3,7 +3,7 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 4.10
+ *                                Version 4.5
  *
  * A portable Motorola M680x0 processor emulation engine.
  * Copyright Karl Stenerud.  All rights reserved.
@@ -597,7 +597,6 @@ static void default_instr_hook_callback(unsigned int pc)
 	jmp_buf m68ki_aerr_trap;
 #endif /* M68K_EMULATE_ADDRESS_ERROR */
 
-
 /* ======================================================================== */
 /* ================================= API ================================== */
 /* ======================================================================== */
@@ -1046,6 +1045,9 @@ void m68k_init(void)
 /* Pulse the RESET line on the CPU */
 void m68k_pulse_reset(void)
 {
+	/* Disable the PMMU on reset */
+	m68ki_cpu.pmmu_enabled = 0;
+
 	/* Clear all stop levels and eat up all remaining cycles */
 	CPU_STOPPED = 0;
 	SET_CYCLES(0);
@@ -1087,7 +1089,6 @@ void m68k_pulse_halt(void)
 {
 	CPU_STOPPED |= STOP_LEVEL_HALT;
 }
-
 
 /* Get and set the current CPU context */
 /* This is to allow for multiple CPUs */

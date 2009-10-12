@@ -3019,6 +3019,32 @@ static void d68030_pmove(void)
 	// do this after fetching the second PMOVE word so we properly get the 3rd if necessary
 	str = get_ea_mode_str_32(g_cpu_ir);
 
+	if ((modes & 0xfde0) == 0x2000)	// PLOAD
+	{
+		if (modes & 0x0200)
+		{
+	 		sprintf(g_dasm_str, "pload  #%d, %s", (modes>>10)&7, str);
+		}
+		else
+		{
+	 		sprintf(g_dasm_str, "pload  %s, #%d", str, (modes>>10)&7);
+		}
+		return;
+	}
+
+	if ((modes & 0xe200) == 0x2000)	// PFLUSHA
+	{
+		if (modes & 0x0200)
+		{
+	 		sprintf(g_dasm_str, "pflush %s, %s", g_mmuregs[(modes>>10)&7], str);
+		}
+		else
+		{
+	 		sprintf(g_dasm_str, "pflush %s, %s", str, g_mmuregs[(modes>>10)&7]);
+		}
+		return;
+	}
+
 	switch ((modes>>13) & 0x7)
 	{
 		case 0:	// MC68030/040 form with FD bit
@@ -3767,7 +3793,7 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
 	return 1;
 }
 
-
+// f028 2215 0008
 
 /* ======================================================================== */
 /* ============================== END OF FILE ============================= */

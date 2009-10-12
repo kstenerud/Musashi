@@ -1,26 +1,5 @@
 #include <math.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include "m68kcpu.h"
-
-extern void exit(int);
-
-#if defined(_MSC_VER)
-#  define NORETURN __declspec(noreturn)
-#elif defined(__clang__) || defined(__GNUC__)
-#  define NORETURN __attribute__((noreturn))
-#else
-#  define NORETURN
-#endif
-
-// TODO: Remove this and replace with a non-fatal signaling mechanism
-static NORETURN void fatalerror(char *format, ...) {
-      va_list ap;
-      va_start(ap,format);
-      fprintf(stderr,format,ap);
-      va_end(ap);
-      exit(1);
-}
 
 #define FPCC_N			0x08000000
 #define FPCC_Z			0x04000000

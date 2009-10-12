@@ -3,7 +3,7 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.32
+ *                                Version 4.5
  *
  * A portable Motorola M680x0 processor emulation engine.
  * Copyright Karl Stenerud.  All rights reserved.
@@ -267,7 +267,11 @@ extern "C" {
 #endif /* M68K_INT_GT_32_BIT || M68K_USE_64_BIT */
 
 /* Simulate address lines of 68k family */
+#if M68K_EMULATE_PMMU
+#define ADDRESS_68K(A) (PMMU_ENABLED ? pmmu_translate_addr((A)&CPU_ADDRESS_MASK) : ((A)&CPU_ADDRESS_MASK))
+#else
 #define ADDRESS_68K(A) ((A)&CPU_ADDRESS_MASK)
+#endif
 
 
 /* Shift & Rotate Macros. */
@@ -369,6 +373,7 @@ extern "C" {
 #define CYC_SHIFT        m68ki_cpu.cyc_shift
 #define CYC_RESET        m68ki_cpu.cyc_reset
 #define HAS_PMMU	 m68ki_cpu.has_pmmu
+#define PMMU_ENABLED	 m68ki_cpu.pmmu_enabled
 #define RESET_CYCLES	 m68ki_cpu.reset_cycles
 
 
@@ -945,6 +950,7 @@ typedef struct
 	uint instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
 	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
 	int    has_pmmu;     /* Indicates if a PMMU available (yes on 030, 040, no on EC030) */
+	int    pmmu_enabled; /* Indicates if the PMMU is enabled */
 	uint reset_cycles;
 
 	/* Clocks required for instructions / exceptions */
@@ -961,6 +967,12 @@ typedef struct
 	/* Virtual IRQ lines state */
 	uint virq_state;
 	uint nmi_pending;
+
+	/* PMMU registers */
+	uint mmu_crp_aptr, mmu_crp_limit;
+	uint mmu_srp_aptr, mmu_srp_limit;
+	uint mmu_tc;
+	uint16 mmu_sr;
 
 	const uint8* cyc_instruction;
 	const uint8* cyc_exception;
@@ -1010,6 +1022,8 @@ char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type);
 
 
 /* ---------------------------- Read Immediate ---------------------------- */
+
+#include "m68kmmu.h"
 
 /* Handles all immediate reads, does address error check, function code setting,
  * and prefetching if they are enabled in m68kconf.h

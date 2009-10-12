@@ -8469,7 +8469,81 @@ M68KMAKE_OP(pmove, 32, ., .)
 		modes = m68ki_read_imm_16();
 		ea = M68KMAKE_GET_EA_AY_32;
 
-		fprintf(stderr,"680x0: unhandled PMOVE modes %x ea %x\n", modes, ea);
+		if ((modes & 0xfde0) == 0x2000)	// PLOAD
+		{
+			fprintf(stderr,"680x0: unhandled PLOAD\n");
+			return;
+		}
+
+		if ((modes & 0xe200) == 0x2000)	// PFLUSHA
+		{
+			fprintf(stderr,"680x0: unhandled PFLUSHA\n");
+			return;
+		}
+
+		switch ((modes>>13) & 0x7)
+		{
+			case 0:	// MC68030/040 form with FD bit
+			case 2:	// MC68881 form, FD never set
+				if (modes & 0x200)
+				{
+					fprintf(stderr,"680x0: PMOVE from MMU not supported\n");
+				}
+				else
+				{
+				 	switch ((modes>>10) & 7)
+					{
+						case 0:	// translation control register
+							m68ki_cpu.mmu_tc = m68k_read_memory_16( ea)<<16;
+							m68ki_cpu.mmu_tc |= m68k_read_memory_16( ea+2);
+
+							if (m68ki_cpu.mmu_tc & 0x80000000)
+							{
+								m68ki_cpu.pmmu_enabled = 1;
+							}
+							else
+							{
+								m68ki_cpu.pmmu_enabled = 0;
+							}
+							break;
+
+						case 2:	// supervisor root pointer
+							m68ki_cpu.mmu_srp_limit = m68k_read_memory_16( ea)<<16;
+							m68ki_cpu.mmu_srp_limit |= m68k_read_memory_16( ea+2);
+							m68ki_cpu.mmu_srp_aptr = m68k_read_memory_16( ea+4)<<16;
+							m68ki_cpu.mmu_srp_aptr |= m68k_read_memory_16( ea+6);
+							break;
+
+						case 3:	// CPU root pointer
+							m68ki_cpu.mmu_crp_limit = m68k_read_memory_16( ea)<<16;
+							m68ki_cpu.mmu_crp_limit |= m68k_read_memory_16( ea+2);
+							m68ki_cpu.mmu_crp_aptr = m68k_read_memory_16( ea+4)<<16;
+							m68ki_cpu.mmu_crp_aptr |= m68k_read_memory_16( ea+6);
+							break;
+
+						default:
+							fprintf(stderr,"680x0: PMOVE to unknown MMU register %x\n", (modes>>10) & 7);
+							break;
+					}
+				}
+				break;
+
+			case 3:	// MC68030 to/from status reg
+				if (modes & 0x200)
+				{
+					m68k_write_memory_16(ea, m68ki_cpu.mmu_sr);
+				}
+				else
+				{
+					m68ki_cpu.mmu_sr = m68k_read_memory_16( ea);
+				}
+				break;
+
+			default:
+				fprintf(stderr,"680x0: unknown PMOVE mode %x (modes %04x) (PC %x)\n", (modes>>13) & 0x7, modes, REG_PC);
+				break;
+		}
+
 	}
 	else
 	{
