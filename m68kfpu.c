@@ -96,6 +96,11 @@ static uint8 READ_EA_8(int ea)
 		{
 			switch (reg)
 			{
+				case 0:		// (xxx).W
+				{
+					uint32 ea = (uint32)OPER_I_16();
+					return m68ki_read_8(ea);
+				}
 				case 1:		// (xxx).L
 				{
 					uint32 d1 = OPER_I_16();
@@ -147,6 +152,11 @@ static uint16 READ_EA_16(int ea)
 		{
 			switch (reg)
 			{
+				case 0:		// (xxx).W
+				{
+					uint32 ea = (uint32)OPER_I_16();
+					return m68ki_read_16(ea);
+				}
 				case 1:		// (xxx).L
 				{
 					uint32 d1 = OPER_I_16();
@@ -204,6 +214,11 @@ static uint32 READ_EA_32(int ea)
 		{
 			switch (reg)
 			{
+				case 0:		// (xxx).W
+				{
+					uint32 ea = (uint32)OPER_I_16();
+					return m68ki_read_32(ea);
+				}
 				case 1:		// (xxx).L
 				{
 					uint32 d1 = OPER_I_16();
@@ -226,6 +241,63 @@ static uint32 READ_EA_32(int ea)
 		}
 		default:	fatalerror("MC68040: READ_EA_32: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
+	return 0;
+}
+
+static uint64 READ_EA_64(int ea)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+	uint32 h1, h2;
+
+	switch (mode)
+	{
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			h1 = m68ki_read_32(ea+0);
+			h2 = m68ki_read_32(ea+4);
+			return  (uint64)(h1) << 32 | (uint64)(h2);
+		}
+		case 3:		// (An)+
+		{
+			uint32 ea = REG_A[reg];
+			REG_A[reg] += 8;
+			h1 = m68ki_read_32(ea+0);
+			h2 = m68ki_read_32(ea+4);
+			return  (uint64)(h1) << 32 | (uint64)(h2);
+		}
+		case 5:		// (d16, An)
+		{
+			uint32 ea = EA_AY_DI_32();
+			h1 = m68ki_read_32(ea+0);
+			h2 = m68ki_read_32(ea+4);
+			return  (uint64)(h1) << 32 | (uint64)(h2);
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 4:		// #<data>
+				{
+					h1 = OPER_I_32();
+					h2 = OPER_I_32();
+					return  (uint64)(h1) << 32 | (uint64)(h2);
+				}
+				case 2:		// (d16, PC)
+				{
+					uint32 ea = EA_PCDI_32();
+					h1 = m68ki_read_32(ea+0);
+					h2 = m68ki_read_32(ea+4);
+					return  (uint64)(h1) << 32 | (uint64)(h2);
+				}
+				default:	fatalerror("MC68040: READ_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
+		default:	fatalerror("MC68040: READ_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+	}
+
 	return 0;
 }
 
@@ -377,6 +449,11 @@ static void WRITE_EA_32(int ea, uint32 data)
 			REG_D[reg] = data;
 			break;
 		}
+		case 1:		// An
+		{
+			REG_A[reg] = data;
+			break;
+		}
 		case 2:		// (An)
 		{
 			uint32 ea = REG_A[reg];
@@ -431,63 +508,6 @@ static void WRITE_EA_32(int ea, uint32 data)
 		}
 		default:	fatalerror("MC68040: WRITE_EA_32: unhandled mode %d, reg %d, data %08X at %08X\n", mode, reg, data, REG_PC);
 	}
-}
-
-static uint64 READ_EA_64(int ea)
-{
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
-	uint32 h1, h2;
-
-	switch (mode)
-	{
-		case 2:		// (An)
-		{
-			uint32 ea = REG_A[reg];
-			h1 = m68ki_read_32(ea+0);
-			h2 = m68ki_read_32(ea+4);
-			return  (uint64)(h1) << 32 | (uint64)(h2);
-		}
-		case 3:		// (An)+
-		{
-			uint32 ea = REG_A[reg];
-			REG_A[reg] += 8;
-			h1 = m68ki_read_32(ea+0);
-			h2 = m68ki_read_32(ea+4);
-			return  (uint64)(h1) << 32 | (uint64)(h2);
-		}
-		case 5:		// (d16, An)
-		{
-			uint32 ea = EA_AY_DI_32();
-			h1 = m68ki_read_32(ea+0);
-			h2 = m68ki_read_32(ea+4);
-			return  (uint64)(h1) << 32 | (uint64)(h2);
-		}
-		case 7:
-		{
-			switch (reg)
-			{
-				case 4:		// #<data>
-				{
-					h1 = OPER_I_32();
-					h2 = OPER_I_32();
-					return  (uint64)(h1) << 32 | (uint64)(h2);
-				}
-				case 2:		// (d16, PC)
-				{
-					uint32 ea = EA_PCDI_32();
-					h1 = m68ki_read_32(ea+0);
-					h2 = m68ki_read_32(ea+4);
-					return  (uint64)(h1) << 32 | (uint64)(h2);
-				}
-				default:	fatalerror("MC68040: READ_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
-			}
-			break;
-		}
-		default:	fatalerror("MC68040: READ_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
-	}
-
-	return 0;
 }
 
 static void WRITE_EA_64(int ea, uint64 data)

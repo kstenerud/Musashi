@@ -283,6 +283,7 @@ M68KMAKE_OPCODE_HANDLER_HEADER
 #include "m68kcpu.h"
 extern void m68040_fpu_op0(void);
 extern void m68040_fpu_op1(void);
+extern void m68881_mmu_ops();
 
 /* ======================================================================== */
 /* ========================= INSTRUCTION HANDLERS ========================= */
@@ -769,7 +770,7 @@ pack      16  mm    axy7  1000111101001111  ..........  . . U U U   .   .  13  1
 pack      16  mm    .     1000...101001...  ..........  . . U U U   .   .  13  13  13
 pea       32  .     .     0100100001......  A..DXWLdx.  U U U U U   6   6   5   5   5
 pflush    32  .     .     1111010100011000  ..........  . . . . S   .   .   .   .   4   TODO: correct timing
-pmove     32  .     .     1111000000......  A..DXWLdx.  . . S S S   .   .   8   8   8
+pmmu      32  .     .     1111000.........  ..........  . . S S S   .   .   8   8   8
 reset      0  .     .     0100111001110000  ..........  S S S S S   0   0   0   0   0
 ror        8  s     .     1110...000011...  ..........  U U U U U   6   6   8   8   8
 ror       16  s     .     1110...001011...  ..........  U U U U U   6   6   8   8   8
@@ -8448,126 +8449,21 @@ M68KMAKE_OP(pea, 32, ., .)
 	m68ki_push_32(ea);
 }
 
-
 M68KMAKE_OP(pflush, 32, ., .)
 {
 	if ((CPU_TYPE_IS_EC020_PLUS(CPU_TYPE)) && (HAS_PMMU))
 	{
-		fprintf(stderr,"680x0: unhandled PFLUSH\n");
+		fprintf(stderr,"68040: unhandled PFLUSH\n");
 		return;
 	}
 	m68ki_exception_1111();
 }
 
-M68KMAKE_OP(pmove, 32, ., .)
+M68KMAKE_OP(pmmu, 32, ., .)
 {
-	uint16 modes;
-	uint32 ea;
-
 	if ((CPU_TYPE_IS_EC020_PLUS(CPU_TYPE)) && (HAS_PMMU))
 	{
-		modes = m68ki_read_imm_16();
-		ea = M68KMAKE_GET_EA_AY_32;
-
-		if ((modes & 0xfde0) == 0x2000)	// PLOAD
-		{
-			fprintf(stderr,"680x0: unhandled PLOAD\n");
-			return;
-		}
-
-		if ((modes & 0xe200) == 0x2000)	// PFLUSHA
-		{
-			fprintf(stderr,"680x0: unhandled PFLUSHA\n");
-			return;
-		}
-
-		switch ((modes>>13) & 0x7)
-		{
-			case 0:	// MC68030/040 form with FD bit
-			case 2:	// MC68881 form, FD never set
-				if (modes & 0x200)
-				{
-				 	switch ((modes>>10) & 7)
-					{
-						case 0:	// translation control register
-							m68k_write_memory_16( ea, m68ki_cpu.mmu_tc>>16);
-							m68k_write_memory_16( ea+2, m68ki_cpu.mmu_tc&0xffff);
-							break;
-
-						case 2: // supervisor root pointer
-							m68k_write_memory_16( ea, m68ki_cpu.mmu_srp_limit>>16);
-							m68k_write_memory_16( ea+2, m68ki_cpu.mmu_srp_limit&0xffff);
-							m68k_write_memory_16( ea+4, m68ki_cpu.mmu_srp_aptr>>16);
-							m68k_write_memory_16( ea+6, m68ki_cpu.mmu_srp_aptr&0xffff);
-							break;
-
-						case 3: // CPU root pointer
-							m68k_write_memory_16( ea, m68ki_cpu.mmu_crp_limit>>16);
-							m68k_write_memory_16( ea+2, m68ki_cpu.mmu_crp_limit&0xffff);
-							m68k_write_memory_16( ea+4, m68ki_cpu.mmu_crp_aptr>>16);
-							m68k_write_memory_16( ea+6, m68ki_cpu.mmu_crp_aptr&0xffff);
-							break;
-
-						default:
-							fprintf(stderr,"680x0: PMOVE from unknown MMU register %x, PC %x\n", (modes>>10) & 7, REG_PC);
-							break;
-					}
-				}
-				else
-				{
-				 	switch ((modes>>10) & 7)
-					{
-						case 0:	// translation control register
-							m68ki_cpu.mmu_tc = m68k_read_memory_16( ea)<<16;
-							m68ki_cpu.mmu_tc |= m68k_read_memory_16( ea+2);
-
-							if (m68ki_cpu.mmu_tc & 0x80000000)
-							{
-								m68ki_cpu.pmmu_enabled = 1;
-							}
-							else
-							{
-								m68ki_cpu.pmmu_enabled = 0;
-							}
-							break;
-
-						case 2:	// supervisor root pointer
-							m68ki_cpu.mmu_srp_limit = m68k_read_memory_16( ea)<<16;
-							m68ki_cpu.mmu_srp_limit |= m68k_read_memory_16( ea+2);
-							m68ki_cpu.mmu_srp_aptr = m68k_read_memory_16( ea+4)<<16;
-							m68ki_cpu.mmu_srp_aptr |= m68k_read_memory_16( ea+6);
-							break;
-
-						case 3:	// CPU root pointer
-							m68ki_cpu.mmu_crp_limit = m68k_read_memory_16( ea)<<16;
-							m68ki_cpu.mmu_crp_limit |= m68k_read_memory_16( ea+2);
-							m68ki_cpu.mmu_crp_aptr = m68k_read_memory_16( ea+4)<<16;
-							m68ki_cpu.mmu_crp_aptr |= m68k_read_memory_16( ea+6);
-							break;
-
-						default:
-							fprintf(stderr,"680x0: PMOVE to unknown MMU register %x, PC %x\n", (modes>>10) & 7, REG_PC);
-							break;
-					}
-				}
-				break;
-
-			case 3:	// MC68030 to/from status reg
-				if (modes & 0x200)
-				{
-					m68k_write_memory_16(ea, m68ki_cpu.mmu_sr);
-				}
-				else
-				{
-					m68ki_cpu.mmu_sr = m68k_read_memory_16( ea);
-				}
-				break;
-
-			default:
-				fprintf(stderr,"680x0: unknown PMOVE mode %x (modes %04x) (PC %x)\n", (modes>>13) & 0x7, modes, REG_PC);
-				break;
-		}
-
+		m68881_mmu_ops();
 	}
 	else
 	{

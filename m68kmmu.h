@@ -25,8 +25,8 @@ inline void fatalerror(char *format, ...) {
 */
 inline uint pmmu_translate_addr(uint addr_in)
 {
-	uint addr_out, tbl_entry, tbl_entry2, tamode, tbmode;
-	uint root_aptr, root_limit, tofs, is, abits, bbits; // , cbits;
+	uint32 addr_out, tbl_entry = 0, tbl_entry2, tamode = 0, tbmode = 0, tcmode = 0;
+	uint root_aptr, root_limit, tofs, is, abits, bbits, cbits;
 	uint resolved, tptr, shift;
 
 	resolved = 0;
@@ -48,7 +48,7 @@ inline uint pmmu_translate_addr(uint addr_in)
 	is = (m68ki_cpu.mmu_tc>>16) & 0xf;
 	abits = (m68ki_cpu.mmu_tc>>12)&0xf;
 	bbits = (m68ki_cpu.mmu_tc>>8)&0xf;
-	// cbits = (m68ki_cpu.mmu_tc>>4)&0xf;
+	cbits = (m68ki_cpu.mmu_tc>>4)&0xf;
 
 //	fprintf(stderr,"PMMU: tcr %08x limit %08x aptr %08x is %x abits %d bbits %d cbits %d\n", m68ki_cpu.mmu_tc, root_limit, root_aptr, is, abits, bbits, cbits);
 
@@ -121,15 +121,34 @@ inline uint pmmu_translate_addr(uint addr_in)
 	// if table A wasn't early-out, continue to process table B
 	if (!resolved)
 	{
+		// get table C offset and pointer
+		tofs = (addr_in<<(is+abits+bbits))>>(32-cbits);
+		tptr = tbl_entry & 0xfffffff0;
+
 		switch (tbmode)
 		{
 			case 0:	// invalid, should cause MMU exception
-			case 2: // 4-byte table C descriptor
-			case 3: // 8-byte table C descriptor
-				fatalerror("680x0 PMMU: Unhandled Table B mode %d (addr_in %08x)\n", tbmode, addr_in);
+				fatalerror("680x0 PMMU: Unhandled Table B mode %d (addr_in %08x PC %x)\n", tbmode, addr_in, REG_PC);
 				break;
 
-			case 1: // early termination descriptor
+			case 2: // 4-byte table C descriptor
+				tofs *= 4;
+//				fprintf(stderr,"PMMU: reading table C entry at %08x\n", tofs + tptr);
+				tbl_entry = m68k_read_memory_32(tofs + tptr);
+				tcmode = tbl_entry & 3;
+//				fprintf(stderr,"PMMU: addr %08x entry %08x mode %x tofs %x\n", addr_in, tbl_entry, tbmode, tofs);
+				break;
+
+			case 3: // 8-byte table C descriptor
+				tofs *= 8;
+//				fprintf(stderr,"PMMU: reading table C entries at %08x\n", tofs + tptr);
+				tbl_entry2 = m68k_read_memory_32(tofs + tptr);
+				tbl_entry = m68k_read_memory_32(tofs + tptr + 4);
+				tcmode = tbl_entry2 & 3;
+//				fprintf(stderr,"PMMU: addr %08x entry %08x entry2 %08x mode %x tofs %x\n", addr_in, tbl_entry, tbl_entry2, tbmode, tofs);
+				break;
+
+			case 1: // termination descriptor
 				tbl_entry &= 0xffffff00;
 
 				shift = is+abits+bbits;
@@ -139,7 +158,28 @@ inline uint pmmu_translate_addr(uint addr_in)
 		}
 	}
 
-//	if ((addr_in < 0x40000000) || (addr_in > 0x4fffffff)) printf("PMMU: [%08x] => [%08x]\n", addr_in, addr_out);
+	if (!resolved)
+	{
+		switch (tcmode)
+		{
+			case 0:	// invalid, should cause MMU exception
+			case 2: // 4-byte ??? descriptor
+			case 3: // 8-byte ??? descriptor
+				fatalerror("680x0 PMMU: Unhandled Table B mode %d (addr_in %08x PC %x)\n", tbmode, addr_in, REG_PC);
+				break;
+
+			case 1: // termination descriptor
+				tbl_entry &= 0xffffff00;
+
+				shift = is+abits+bbits+cbits;
+				addr_out = ((addr_in<<shift)>>shift) + tbl_entry;
+				resolved = 1;
+				break;
+		}
+	}
+
+
+//	fprintf(stderr,"PMMU: [%08x] => [%08x]\n", addr_in, addr_out);
 
 	return addr_out;
 }

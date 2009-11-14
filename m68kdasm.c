@@ -42,6 +42,10 @@
 #define uint32 uint
 #endif
 
+#ifndef uint16
+#define uint16 unsigned short
+#endif
+
 #ifndef DECL_SPEC
 #define DECL_SPEC
 #endif
@@ -160,6 +164,7 @@ uint  peek_imm_32(void);
 /* make signed integers 100% portably */
 static int make_int_8(int value);
 static int make_int_16(int value);
+static int make_int_32(int value);
 
 /* make a string of a hex value */
 static char* make_signed_hex_str_8(uint val);
@@ -247,6 +252,12 @@ static const char *const g_mmuregs[8] =
 	"tc", "drp", "srp", "crp", "cal", "val", "sccr", "acr"
 };
 
+static const char *const g_mmucond[16] =
+{
+	"bs", "bc", "ls", "lc", "ss", "sc", "as", "ac",
+	"ws", "wc", "is", "ic", "gs", "gc", "cs", "cc"
+};
+
 /* ======================================================================== */
 /* =========================== UTILITY FUNCTIONS ========================== */
 /* ======================================================================== */
@@ -330,6 +341,10 @@ static int make_int_16(int value)
 	return (value & 0x8000) ? value | ~0xffff : value & 0xffff;
 }
 
+static int make_int_32(int value)
+{
+	return (value & 0x80000000) ? value | ~0xffffffff : value & 0xffffffff;
+}
 
 /* Get string representation of hex values */
 static char* make_signed_hex_str_8(uint val)
@@ -2559,6 +2574,7 @@ static void d68000_pea(void)
 	sprintf(g_dasm_str, "pea     %s", get_ea_mode_str_32(g_cpu_ir));
 }
 
+// this is a 68040-specific form of PFLUSH
 static void d68040_pflush(void)
 {
 	LIMIT_CPU_TYPES(M68040_PLUS);
@@ -3015,7 +3031,16 @@ static void d68020_unpk_mm(void)
 }
 
 
-static void d68030_pmove(void)
+// PFLUSH:  001xxx0xxxxxxxxx
+// PLOAD:   001000x0000xxxxx
+// PVALID1: 0010100000000000
+// PVALID2: 0010110000000xxx
+// PMOVE 1: 010xxxx000000000
+// PMOVE 2: 011xxxx0000xxx00
+// PMOVE 3: 011xxxx000000000
+// PTEST:   100xxxxxxxxxxxxx
+// PFLUSHR:  1010000000000000
+static void d68851_p000(void)
 {
 	char* str;
 	uint modes = read_imm_16();
@@ -3036,16 +3061,32 @@ static void d68030_pmove(void)
 		return;
 	}
 
-	if ((modes & 0xe200) == 0x2000)	// PFLUSHA
+	if ((modes & 0xe200) == 0x2000)	// PFLUSH
 	{
-		if (modes & 0x0200)
-		{
-	 		sprintf(g_dasm_str, "pflush %s, %s", g_mmuregs[(modes>>10)&7], str);
-		}
-		else
-		{
-	 		sprintf(g_dasm_str, "pflush %s, %s", str, g_mmuregs[(modes>>10)&7]);
-		}
+		sprintf(g_dasm_str, "pflushr %x, %x, %s", modes & 0x1f, (modes>>5)&0xf, str);
+		return;
+	}
+
+	if (modes == 0xa000)	// PFLUSHR
+	{
+		sprintf(g_dasm_str, "pflushr %s", str);
+	}
+
+	if (modes == 0x2800)	// PVALID (FORMAT 1)
+	{
+		sprintf(g_dasm_str, "pvalid VAL, %s", str);
+		return;
+	}
+
+	if ((modes & 0xfff8) == 0x2c00)	// PVALID (FORMAT 2)
+	{
+		sprintf(g_dasm_str, "pvalid A%d, %s", modes & 0xf, str);
+		return;
+	}
+
+	if ((modes & 0xe000) == 0x8000)	// PTEST
+	{
+		sprintf(g_dasm_str, "ptest #%d, %s", modes & 0x1f, str);
 		return;
 	}
 
@@ -3094,6 +3135,33 @@ static void d68030_pmove(void)
 	}
 }
 
+static void d68851_pbcc16(void)
+{
+	uint32 temp_pc = g_cpu_pc;
+
+	sprintf(g_dasm_str, "pb%s %x", g_mmucond[g_cpu_ir&0xf], temp_pc + make_int_16(read_imm_16()));
+}
+
+static void d68851_pbcc32(void)
+{
+	uint32 temp_pc = g_cpu_pc;
+
+	sprintf(g_dasm_str, "pb%s %x", g_mmucond[g_cpu_ir&0xf], temp_pc + make_int_32(read_imm_32()));
+}
+
+static void d68851_pdbcc(void)
+{
+	uint32 temp_pc = g_cpu_pc;
+	uint16 modes = read_imm_16();
+
+	sprintf(g_dasm_str, "pb%s %x", g_mmucond[modes&0xf], temp_pc + make_int_16(read_imm_16()));
+}
+
+// PScc:  0000000000xxxxxx
+static void d68851_p001(void)
+{
+	sprintf(g_dasm_str, "MMU 001 group");
+}
 
 /* ======================================================================== */
 /* ======================= INSTRUCTION TABLE BUILDER ====================== */
@@ -3417,7 +3485,11 @@ static const opcode_struct g_opcode_info[] =
 	{d68000_unlk         , 0xfff8, 0x4e58, 0x000},
 	{d68020_unpk_rr      , 0xf1f8, 0x8180, 0x000},
 	{d68020_unpk_mm      , 0xf1f8, 0x8188, 0x000},
-	{d68030_pmove        , 0xffc0, 0xf000, 0x278},
+	{d68851_p000         , 0xffc0, 0xf000, 0x000},
+	{d68851_pbcc16       , 0xffc0, 0xf080, 0x000},
+	{d68851_pbcc32       , 0xffc0, 0xf0c0, 0x000},
+	{d68851_pdbcc        , 0xfff8, 0xf048, 0x000},
+	{d68851_p001         , 0xffc0, 0xf040, 0x000},
 	{0, 0, 0, 0}
 };
 
@@ -3553,11 +3625,14 @@ unsigned int m68k_disassemble(char* str_buff, unsigned int pc, unsigned int cpu_
 			g_cpu_type = TYPE_68020;
 			g_address_mask = 0xffffffff;
 			break;
+		case M68K_CPU_TYPE_68EC030:
 		case M68K_CPU_TYPE_68030:
 			g_cpu_type = TYPE_68030;
 			g_address_mask = 0xffffffff;
 			break;
 		case M68K_CPU_TYPE_68040:
+		case M68K_CPU_TYPE_68EC040:
+		case M68K_CPU_TYPE_68LC040:
 			g_cpu_type = TYPE_68040;
 			g_address_mask = 0xffffffff;
 			break;
@@ -3750,6 +3825,7 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
 		case M68K_CPU_TYPE_68EC020:
 		case M68K_CPU_TYPE_68020:
 		case M68K_CPU_TYPE_68030:
+		case M68K_CPU_TYPE_68EC030:
 			if(g_instruction_table[instruction] == d68040_cinv)
 				return 0;
 			if(g_instruction_table[instruction] == d68040_cpush)
@@ -3764,10 +3840,10 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
 				return 0;
 			if(g_instruction_table[instruction] == d68040_move16_al_ai)
 				return 0;
-			if(g_instruction_table[instruction] == d68040_pflush)
-				return 0;
 			// Fallthrough
 		case M68K_CPU_TYPE_68040:
+		case M68K_CPU_TYPE_68EC040:
+		case M68K_CPU_TYPE_68LC040:
 			if(g_instruction_table[instruction] == d68020_cpbcc_16)
 				return 0;
 			if(g_instruction_table[instruction] == d68020_cpbcc_32)
@@ -3787,6 +3863,8 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
 			if(g_instruction_table[instruction] == d68020_cptrapcc_16)
 				return 0;
 			if(g_instruction_table[instruction] == d68020_cptrapcc_32)
+				return 0;
+			if(g_instruction_table[instruction] == d68040_pflush)
 				return 0;
 	}
 	if(cpu_type != M68K_CPU_TYPE_68020 && cpu_type != M68K_CPU_TYPE_68EC020 &&
