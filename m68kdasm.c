@@ -499,7 +499,14 @@ static char* get_ea_mode_str(uint instruction, uint size)
 					strcat(mode, "[");
 				if(base)
 				{
-					strcat(mode, make_signed_hex_str_16(base));
+					if (EXT_BASE_DISPLACEMENT_LONG(extension))
+					{
+						strcat(mode, make_signed_hex_str_32(base));
+					}
+					else
+					{
+						strcat(mode, make_signed_hex_str_16(base));
+					}
 					comma = 1;
 				}
 				if(*base_reg)
