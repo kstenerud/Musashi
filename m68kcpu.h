@@ -88,6 +88,15 @@ typedef sint32 sint64;
 typedef uint32 uint64;
 #endif /* M68K_USE_64_BIT */
 
+/* U64 and S64 are used to wrap long integer constants. */
+#ifdef __GNUC__
+#define U64(val) val##ULL
+#define S64(val) val##LL
+#else
+#define U64(val) val
+#define S64(val) val
+#endif
+
 #include "softfloat/milieu.h"
 #include "softfloat/softfloat.h"
 
