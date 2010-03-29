@@ -23,7 +23,23 @@ static void fatalerror(char *format, ...) {
 
 extern flag floatx80_is_nan( floatx80 a );
 
-inline double fx80_to_double(floatx80 fx)
+// masks for packed dwords, positive k-factor
+static uint32 pkmask2[18] =
+{
+	0xffffffff, 0, 0xf0000000, 0xff000000, 0xfff00000, 0xffff0000,
+	0xfffff000, 0xffffff00, 0xfffffff0, 0xffffffff,
+	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+	0xffffffff, 0xffffffff, 0xffffffff
+};
+
+static uint32 pkmask3[18] =
+{
+	0xffffffff, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0xf0000000, 0xff000000, 0xfff00000, 0xffff0000,
+	0xfffff000, 0xffffff00, 0xfffffff0, 0xffffffff,
+};
+
+static inline double fx80_to_double(floatx80 fx)
 {
 	uint64 d;
 	double *foo;
@@ -35,13 +51,220 @@ inline double fx80_to_double(floatx80 fx)
 	return *foo;
 }
 
-inline floatx80 double_to_fx80(double in)
+static inline floatx80 double_to_fx80(double in)
 {
 	uint64 *d;
 
 	d = (uint64 *)&in;
 
 	return float64_to_floatx80(*d);
+}
+
+static inline floatx80 load_extended_float80(uint32 ea)
+{
+	uint32 d1,d2;
+	uint16 d3;
+	floatx80 fp;
+
+	d3 = m68ki_read_16(ea);
+	d1 = m68ki_read_32(ea+4);
+	d2 = m68ki_read_32(ea+8);
+
+	fp.high = d3;
+	fp.low = ((uint64)d1<<32) | (d2 & 0xffffffff);
+
+	return fp;
+}
+
+static inline void store_extended_float80(uint32 ea, floatx80 fpr)
+{
+	m68ki_write_16(ea+0, fpr.high);
+	m68ki_write_16(ea+2, 0);
+	m68ki_write_32(ea+4, (fpr.low>>32)&0xffffffff);
+	m68ki_write_32(ea+8, fpr.low&0xffffffff);
+}
+
+static inline floatx80 load_pack_float80(uint32 ea)
+{
+	uint32 dw1, dw2, dw3;
+	floatx80 result;
+	double tmp;
+	char str[128], *ch;
+
+	dw1 = m68ki_read_32(ea);
+	dw2 = m68ki_read_32(ea+4);
+	dw3 = m68ki_read_32(ea+8);
+
+	ch = &str[0];
+	if (dw1 & 0x80000000)	// mantissa sign
+	{
+		*ch++ = '-';
+	}
+	*ch++ = (char)((dw1 & 0xf) + '0');
+	*ch++ = '.';
+	*ch++ = (char)(((dw2 >> 28) & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 24) & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 20) & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 16) & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 12) & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 8)  & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 4)  & 0xf) + '0');
+	*ch++ = (char)(((dw2 >> 0)  & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 28) & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 24) & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 20) & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 16) & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 12) & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 8)  & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 4)  & 0xf) + '0');
+	*ch++ = (char)(((dw3 >> 0)  & 0xf) + '0');
+	*ch++ = 'E';
+	if (dw1 & 0x40000000)	// exponent sign
+	{
+		*ch++ = '-';
+	}
+	*ch++ = (char)(((dw1 >> 24) & 0xf) + '0');
+	*ch++ = (char)(((dw1 >> 20) & 0xf) + '0');
+	*ch++ = (char)(((dw1 >> 16) & 0xf) + '0');
+	*ch = '\0';
+
+	sscanf(str, "%le", &tmp);
+
+	result = double_to_fx80(tmp);
+
+	return result;
+}
+
+static inline void store_pack_float80(uint32 ea, int k, floatx80 fpr)
+{
+	uint32 dw1, dw2, dw3;
+	char str[128], *ch;
+	int i, j, exp;
+
+	dw1 = dw2 = dw3 = 0;
+	ch = &str[0];
+
+	sprintf(str, "%.16e", fx80_to_double(fpr));
+
+	if (*ch == '-')
+	{
+		ch++;
+		dw1 = 0x80000000;
+	}
+
+	if (*ch == '+')
+	{
+		ch++;
+	}
+
+	dw1 |= (*ch++ - '0');
+
+	if (*ch == '.')
+	{
+		ch++;
+	}
+
+	// handle negative k-factor here
+	if ((k <= 0) && (k >= -13))
+	{
+		exp = 0;
+		for (i = 0; i < 3; i++)
+		{
+			if (ch[18+i] >= '0' && ch[18+i] <= '9')
+			{
+				exp = (exp << 4) | (ch[18+i] - '0');
+			}
+		}
+
+		if (ch[17] == '-')
+		{
+			exp = -exp;
+		}
+
+		k = -k;
+		// last digit is (k + exponent - 1)
+		k += (exp - 1);
+
+		// round up the last significant mantissa digit
+		if (ch[k+1] >= '5')
+		{
+			ch[k]++;
+		}
+
+		// zero out the rest of the mantissa digits
+		for (j = (k+1); j < 16; j++)
+		{
+			ch[j] = '0';
+		}
+
+		// now zero out K to avoid tripping the positive K detection below
+		k = 0;
+	}
+
+	// crack 8 digits of the mantissa
+	for (i = 0; i < 8; i++)
+	{
+		dw2 <<= 4;
+		if (*ch >= '0' && *ch <= '9')
+		{
+			dw2 |= *ch++ - '0';
+		}
+	}
+
+	// next 8 digits of the mantissa
+	for (i = 0; i < 8; i++)
+	{
+		dw3 <<= 4;
+		if (*ch >= '0' && *ch <= '9')
+		dw3 |= *ch++ - '0';
+	}
+
+	// handle masking if k is positive
+	if (k >= 1)
+	{
+		if (k <= 17)
+		{
+			dw2 &= pkmask2[k];
+			dw3 &= pkmask3[k];
+		}
+		else
+		{
+			dw2 &= pkmask2[17];
+			dw3 &= pkmask3[17];
+//			m68ki_cpu.fpcr |=  (need to set OPERR bit)
+		}
+	}
+
+	// finally, crack the exponent
+	if (*ch == 'e' || *ch == 'E')
+	{
+		ch++;
+		if (*ch == '-')
+		{
+			ch++;
+			dw1 |= 0x40000000;
+		}
+
+		if (*ch == '+')
+		{
+			ch++;
+		}
+
+		j = 0;
+		for (i = 0; i < 3; i++)
+		{
+			if (*ch >= '0' && *ch <= '9')
+			{
+				j = (j << 4) | (*ch++ - '0');
+			}
+		}
+
+		dw1 |= (j << 16);
+	}
+
+	m68ki_write_32(ea, dw1);
+	m68ki_write_32(ea+4, dw2);
+	m68ki_write_32(ea+8, dw3);
 }
 
 static inline void SET_CONDITION_CODES(floatx80 reg)
@@ -358,6 +581,108 @@ static uint64 READ_EA_64(int ea)
 	return 0;
 }
 
+
+static floatx80 READ_EA_FPE(int ea)
+{
+	floatx80 fpr;
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	switch (mode)
+	{
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			fpr = load_extended_float80(ea);
+			break;
+		}
+
+		case 3:		// (An)+
+		{
+			uint32 ea = REG_A[reg];
+			REG_A[reg] += 12;
+			fpr = load_extended_float80(ea);
+			break;
+		}
+
+		case 7:	// extended modes
+		{
+			switch (reg)
+			{
+				case 2:	// (d16, PC)
+					{
+						uint32 ea = EA_PCDI_32();
+					 	fpr = load_extended_float80(ea);
+					}
+					break;
+
+				case 3:	// (d16,PC,Dx.w)
+					{
+						uint32 ea = EA_PCIX_32();
+						fpr = load_extended_float80(ea);
+					}
+					break;
+
+				default:
+					fatalerror("M68kFPU: READ_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
+					break;
+			}
+		}
+		break;
+
+		default:	fatalerror("M68kFPU: READ_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC); break;
+	}
+
+	return fpr;
+}
+
+static floatx80 READ_EA_PACK(int ea)
+{
+	floatx80 fpr;
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	switch (mode)
+	{
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			fpr = load_pack_float80(ea);
+			break;
+		}
+
+		case 3:		// (An)+
+		{
+			uint32 ea = REG_A[reg];
+			REG_A[reg] += 12;
+			fpr = load_pack_float80(ea);
+			break;
+		}
+
+		case 7:	// extended modes
+		{
+			switch (reg)
+			{
+				case 3:	// (d16,PC,Dx.w)
+					{
+						uint32 ea = EA_PCIX_32();
+						fpr = load_pack_float80(ea);
+					}
+					break;
+
+				default:
+					fatalerror("M68kFPU: READ_EA_PACK: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
+					break;
+			}
+		}
+		break;
+
+		default:	fatalerror("M68kFPU: READ_EA_PACK: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC); break;
+	}
+
+	return fpr;
+}
+
 static void WRITE_EA_8(int ea, uint8 data)
 {
 	int mode = (ea >> 3) & 0x7;
@@ -601,76 +926,6 @@ static void WRITE_EA_64(int ea, uint64 data)
 	}
 }
 
-static inline floatx80 load_extended_float80(uint32 ea)
-{
-	uint32 d1,d2;
-	uint16 d3;
-	floatx80 fp;
-
-	d3 = m68ki_read_16(ea);
-	d1 = m68ki_read_32(ea+4);
-	d2 = m68ki_read_32(ea+8);
-	fp.high = d3;
-	fp.low = ((uint64)d1<<32) | (d2 & 0xffffffff);
-
-	return fp;
-}
-
-static floatx80 READ_EA_FPE(int ea)
-{
-	floatx80 fpr;
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
-
-	switch (mode)
-	{
-		case 2:		// (An)
-		{
-			uint32 ea = REG_A[reg];
-			fpr = load_extended_float80(ea);
-			break;
-		}
-
-		case 3:		// (An)+
-		{
-			uint32 ea = REG_A[reg];
-			REG_A[reg] += 12;
-			fpr = load_extended_float80(ea);
-			break;
-		}
-
-		case 7:	// extended modes
-		{
-			switch (reg)
-			{
-				case 3:	// (d16,PC,Dx.w)
-					{
-						uint32 ea = EA_PCIX_32();
-						fpr = load_extended_float80(ea);
-					}
-					break;
-
-				default:
-					fatalerror("M68kFPU: READ_EA_FPE0: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
-					break;
-			}
-		}
-		break;
-
-		default:	fatalerror("M68kFPU: READ_EA_FPE1: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC); break;
-	}
-
-	return fpr;
-}
-
-static inline void store_extended_float80(uint32 ea, floatx80 fpr)
-{
-	m68ki_write_16(ea+0, fpr.high);
-	m68ki_write_16(ea+2, 0);
-	m68ki_write_32(ea+4, (fpr.low>>32)&0xffffffff);
-	m68ki_write_32(ea+8, fpr.low&0xffffffff);
-}
-
 static void WRITE_EA_FPE(int ea, floatx80 fpr)
 {
 	int mode = (ea >> 3) & 0x7;
@@ -710,9 +965,54 @@ static void WRITE_EA_FPE(int ea, floatx80 fpr)
 			{
 				default:	fatalerror("M68kFPU: WRITE_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
 			}
+			break;
+		}
+		default:	fatalerror("M68kFPU: WRITE_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
+	}
+}
+
+static void WRITE_EA_PACK(int ea, int k, floatx80 fpr)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	switch (mode)
+	{
+		case 2:		// (An)
+		{
+			uint32 ea;
+			ea = REG_A[reg];
+			store_pack_float80(ea, k, fpr);
+			break;
+		}
+
+		case 3:		// (An)+
+		{
+			uint32 ea;
+			ea = REG_A[reg];
+			store_pack_float80(ea, k, fpr);
+			REG_A[reg] += 12;
+			break;
+		}
+
+		case 4:		// -(An)
+		{
+			uint32 ea;
+			REG_A[reg] -= 12;
+			ea = REG_A[reg];
+			store_pack_float80(ea, k, fpr);
+			break;
+		}
+
+		case 7:
+		{
+			switch (reg)
+			{
+				default:	fatalerror("M68kFPU: WRITE_EA_PACK: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
+			}
 		}
 		break;
-		default:	fatalerror("M68kFPU: WRITE_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
+		default:	fatalerror("M68kFPU: WRITE_EA_PACK: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
 	}
 }
 
@@ -751,7 +1051,7 @@ static void fpgen_rm_reg(uint16 w2)
 			}
 			case 3:		// Packed-decimal Real
 			{
-				fatalerror("fpgen_rm_reg: packed-decimal real load unimplemented at %08X\n", REG_PC-4);
+				source = READ_EA_PACK(ea);
 				break;
 			}
 			case 4:		// Word Integer
@@ -913,6 +1213,13 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(11);
 			break;
 		}
+		case 0x25:		// FREM
+		{
+			REG_FP[dst] = floatx80_rem(REG_FP[dst], source);
+			SET_CONDITION_CODES(REG_FP[dst]);
+			USE_CYCLES(43);	// guess
+			break;
+		}
 		case 0x28:		// FSUB
 		{
 			REG_FP[dst] = floatx80_sub(REG_FP[dst], source);
@@ -946,7 +1253,7 @@ static void fmove_reg_mem(uint16 w2)
 	int ea = REG_IR & 0x3f;
 	int src = (w2 >>  7) & 0x7;
 	int dst = (w2 >> 10) & 0x7;
-	//int kfactor = w2 & 0x7f;
+	int k = (w2 & 0x7f);
 
 	switch (dst)
 	{
@@ -969,7 +1276,9 @@ static void fmove_reg_mem(uint16 w2)
 		}
 		case 3:		// Packed-decimal Real with Static K-factor
 		{
-			fatalerror("fmove_reg_mem: packed-decimal real store unimplemented at %08X\n", REG_PC-4);
+			// sign-extend k
+			k = (k & 0x40) ? (k | 0xffffff80) : (k & 0x7f);
+			WRITE_EA_PACK(ea, k, REG_FP[src]);
 			break;
 		}
 		case 4:		// Word Integer
@@ -993,7 +1302,7 @@ static void fmove_reg_mem(uint16 w2)
 		}
 		case 7:		// Packed-decimal Real with Dynamic K-factor
 		{
-			fatalerror("fmove_reg_mem: packed-decimal real store unimplemented at %08X\n", REG_PC-4);
+			WRITE_EA_PACK(ea, REG_D[k>>4], REG_FP[src]);
 			break;
 		}
 	}
@@ -1009,23 +1318,15 @@ static void fmove_fpcr(uint16 w2)
 
 	if (dir)	// From system control reg to <ea>
 	{
-		switch (reg)
-		{
-			case 1:		WRITE_EA_32(ea, REG_FPIAR); break;
-			case 2:		WRITE_EA_32(ea, REG_FPSR); break;
-			case 4:		WRITE_EA_32(ea, REG_FPCR); break;
-			default:	fatalerror("fmove_fpcr: unknown reg %d, dir %d\n", reg, dir);
-		}
+		if (reg & 4) WRITE_EA_32(ea, REG_FPCR);
+		if (reg & 2) WRITE_EA_32(ea, REG_FPSR);
+		if (reg & 1) WRITE_EA_32(ea, REG_FPIAR);
 	}
 	else		// From <ea> to system control reg
 	{
-		switch (reg)
-		{
-			case 1:		REG_FPIAR = READ_EA_32(ea); break;
-			case 2:		REG_FPSR = READ_EA_32(ea); break;
-			case 4:		REG_FPCR = READ_EA_32(ea); break;
-			default:	fatalerror("fmove_fpcr: unknown reg %d, dir %d\n", reg, dir);
-		}
+		if (reg & 4) REG_FPCR = READ_EA_32(ea);
+		if (reg & 2) REG_FPSR = READ_EA_32(ea);
+		if (reg & 1) REG_FPIAR = READ_EA_32(ea);
 	}
 
 	USE_CYCLES(10);
@@ -1116,8 +1417,10 @@ static void fbcc32(void)
 }
 
 
-void m68040_fpu_op0(void)
+void m68040_fpu_op0()
 {
+	m68ki_cpu.fpu_just_reset = 0;
+
 	switch ((REG_IR >> 6) & 0x3)
 	{
 		case 0:
@@ -1138,8 +1441,8 @@ void m68040_fpu_op0(void)
 					break;
 				}
 
-				case 0x4:	// FMOVE ea, FPCR
-				case 0x5:	// FMOVE FPCR, ea
+				case 0x4:	// FMOVEM ea, FPCR
+				case 0x5:	// FMOVEM FPCR, ea
 				{
 					fmove_fpcr(w2);
 					break;
@@ -1172,25 +1475,155 @@ void m68040_fpu_op0(void)
 	}
 }
 
-void m68040_fpu_op1(void)
+static void perform_fsave(uint32 addr, int inc)
+{
+	if (inc)
+	{
+		// 68881 IDLE, version 0x1f
+		m68ki_write_32(addr, 0x1f180000);
+		m68ki_write_32(addr+4, 0);
+		m68ki_write_32(addr+8, 0);
+		m68ki_write_32(addr+12, 0);
+		m68ki_write_32(addr+16, 0);
+		m68ki_write_32(addr+20, 0);
+		m68ki_write_32(addr+24, 0x70000000);
+	}
+	else
+	{
+		m68ki_write_32(addr, 0x70000000);
+		m68ki_write_32(addr-4, 0);
+		m68ki_write_32(addr-8, 0);
+		m68ki_write_32(addr-12, 0);
+		m68ki_write_32(addr-16, 0);
+		m68ki_write_32(addr-20, 0);
+		m68ki_write_32(addr-24, 0x1f180000);
+	}
+}
+
+// FRESTORE on a NULL frame reboots the FPU - all registers to NaN, the 3 status regs to 0
+static void do_frestore_null()
+{
+	int i;
+
+	REG_FPCR = 0;
+	REG_FPSR = 0;
+	REG_FPIAR = 0;
+	for (i = 0; i < 8; i++)
+	{
+		REG_FP[i].high = 0x7fff;
+		REG_FP[i].low = U64(0xffffffffffffffff);
+	}
+
+	// Mac IIci at 408458e6 wants an FSAVE of a just-restored NULL frame to also be NULL
+	// The PRM says it's possible to generate a NULL frame, but not how/when/why.  (need the 68881/68882 manual!)
+	m68ki_cpu.fpu_just_reset = 1;
+}
+
+void m68040_fpu_op1()
 {
 	int ea = REG_IR & 0x3f;
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+	uint32 addr, temp;
 
 	switch ((REG_IR >> 6) & 0x3)
 	{
 		case 0:		// FSAVE <ea>
 		{
-			WRITE_EA_32(ea, 0x00000000);
-			// TODO: correct state frame
+			switch (mode)
+			{
+				case 3:	// (An)+
+		    			addr = EA_AY_PI_32();
+
+					if (m68ki_cpu.fpu_just_reset)
+					{
+						m68ki_write_32(addr, 0);
+					}
+					else
+					{
+						// we normally generate an IDLE frame
+						REG_A[reg] += 6*4;
+						perform_fsave(addr, 1);
+					}
+					break;
+
+				case 4: // -(An)
+		    			addr = EA_AY_PD_32();
+
+					if (m68ki_cpu.fpu_just_reset)
+					{
+						m68ki_write_32(addr, 0);
+					}
+					else
+					{
+						// we normally generate an IDLE frame
+						REG_A[reg] -= 6*4;
+						perform_fsave(addr, 0);
+					}
+					break;
+
+				default:
+					fatalerror("M68kFPU: FSAVE unhandled mode %d reg %d at %x\n", mode, reg, REG_PC);
+			}
 			break;
 		}
+		break;
 
 		case 1:		// FRESTORE <ea>
 		{
-			READ_EA_32(ea);
-			// TODO: correct state frame
+			switch (mode)
+			{
+				case 2: // (An)
+					addr = REG_A[reg];
+					temp = m68ki_read_32(addr);
+
+					// check for NULL frame
+					if (temp & 0xff000000)
+					{
+						// we don't handle non-NULL frames and there's no pre/post inc/dec to do here
+						m68ki_cpu.fpu_just_reset = 0;
+					}
+					else
+					{
+						do_frestore_null();
+					}
+					break;
+
+				case 3:	// (An)+
+		    			addr = EA_AY_PI_32();
+					temp = m68ki_read_32(addr);
+
+					// check for NULL frame
+					if (temp & 0xff000000)
+					{
+						m68ki_cpu.fpu_just_reset = 0;
+
+						// how about an IDLE frame?
+						if ((temp & 0x00ff0000) == 0x00180000)
+						{
+							REG_A[reg] += 6*4;
+						} // check UNIMP
+						else if ((temp & 0x00ff0000) == 0x00380000)
+						{
+							REG_A[reg] += 14*4;
+						} // check BUSY
+						else if ((temp & 0x00ff0000) == 0x00b40000)
+						{
+							REG_A[reg] += 45*4;
+						}
+					}
+					else
+					{
+						do_frestore_null();
+					}
+					break;
+
+				default:
+					fatalerror("M68kFPU: FRESTORE unhandled mode %d reg %d at %x\n", mode, reg, REG_PC);
+			}
 			break;
 		}
+		break;
 
 		default:	fatalerror("m68040_fpu_op1: unimplemented op %d at %08X\n", (REG_IR >> 6) & 0x3, REG_PC-2);
 	}
