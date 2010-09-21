@@ -322,6 +322,18 @@ static inline int TEST_CONDITION(int condition)
 		case 0x15:
 		case 0x05:		return (z || (n && !nan));			// Less Than or Equal
 
+		case 0x16:
+		case 0x06:		return !nan && !z;
+
+		case 0x17:
+		case 0x07:		return !nan;
+
+		case 0x18:
+		case 0x08:		return nan;
+
+		case 0x19:
+		case 0x09:		return nan || z;
+
 		case 0x1a:
 		case 0x0a:		return (nan || !(n || z));			// Not Less Than or Equal
 
@@ -1192,6 +1204,17 @@ static void fpgen_rm_reg(uint16 w2)
 			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(3);
 			break;
+		}
+		case 0x1e:		// FGETEXP
+		{
+			floatx80 temp = source;
+			sint16 temp2;
+
+			temp2 = source.high;	// get the exponent
+			temp2 -= 0x3fff;	// take off the bias
+			REG_FP[dst] = double_to_fx80((double)temp2);
+			SET_CONDITION_CODES(REG_FP[dst]);
+			USE_CYCLES(6);
 		}
 		case 0x20:		// FDIV
 		{
