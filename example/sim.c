@@ -34,7 +34,7 @@ void disassemble_program();
 							  ((BASE)[(ADDR)+2]<<8) |		\
 							  (BASE)[(ADDR)+3])
 
-#define WRITE_BYTE(BASE, ADDR, VAL) (BASE)[ADDR] = (VAL)%0xff
+#define WRITE_BYTE(BASE, ADDR, VAL) (BASE)[ADDR] = (VAL)&0xff
 #define WRITE_WORD(BASE, ADDR, VAL) (BASE)[ADDR] = ((VAL)>>8) & 0xff;		\
 									(BASE)[(ADDR)+1] = (VAL)&0xff
 #define WRITE_LONG(BASE, ADDR, VAL) (BASE)[ADDR] = ((VAL)>>24) & 0xff;		\
