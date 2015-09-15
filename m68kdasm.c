@@ -979,7 +979,7 @@ static void d68020_bfexts(void)
 		sprintf(width, "D%d", extension&7);
 	else
 		sprintf(width, "%d", g_5bit_data_table[extension&31]);
-	sprintf(g_dasm_str, "bfexts  D%d, %s {%s:%s}; (2+)", (extension>>12)&7, get_ea_mode_str_8(g_cpu_ir), offset, width);
+	sprintf(g_dasm_str, "bfexts  %s {%s:%s}, D%d; (2+)", get_ea_mode_str_8(g_cpu_ir), offset, width, (extension>>12)&7);
 }
 
 static void d68020_bfextu(void)
@@ -1000,7 +1000,7 @@ static void d68020_bfextu(void)
 		sprintf(width, "D%d", extension&7);
 	else
 		sprintf(width, "%d", g_5bit_data_table[extension&31]);
-	sprintf(g_dasm_str, "bfextu  D%d, %s {%s:%s}; (2+)", (extension>>12)&7, get_ea_mode_str_8(g_cpu_ir), offset, width);
+	sprintf(g_dasm_str, "bfextu  %s {%s:%s}, D%d; (2+)", get_ea_mode_str_8(g_cpu_ir), offset, width, (extension>>12)&7);
 }
 
 static void d68020_bfffo(void)
@@ -1021,7 +1021,7 @@ static void d68020_bfffo(void)
 		sprintf(width, "D%d", extension&7);
 	else
 		sprintf(width, "%d", g_5bit_data_table[extension&31]);
-	sprintf(g_dasm_str, "bfffo   D%d, %s {%s:%s}; (2+)", (extension>>12)&7, get_ea_mode_str_8(g_cpu_ir), offset, width);
+	sprintf(g_dasm_str, "bfffo   %s {%s:%s}, D%d; (2+)", get_ea_mode_str_8(g_cpu_ir), offset, width, (extension>>12)&7);
 }
 
 static void d68020_bfins(void)
