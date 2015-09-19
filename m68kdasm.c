@@ -1191,7 +1191,7 @@ f e d c b a 9 8 7 6 5 4 3 2 1 0
 	uint extension;
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	extension = read_imm_32();
-	sprintf(g_dasm_str, "cas2.w  D%d:D%d:D%d:D%d, (%c%d):(%c%d); (2+)",
+	sprintf(g_dasm_str, "cas2.w  D%d:D%d, D%d:D%d, (%c%d):(%c%d); (2+)",
 		(extension>>16)&7, extension&7, (extension>>22)&7, (extension>>6)&7,
 		BIT_1F(extension) ? 'A' : 'D', (extension>>28)&7,
 		BIT_F(extension) ? 'A' : 'D', (extension>>12)&7);
@@ -1202,7 +1202,7 @@ static void d68020_cas2_32(void)
 	uint extension;
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	extension = read_imm_32();
-	sprintf(g_dasm_str, "cas2.l  D%d:D%d:D%d:D%d, (%c%d):(%c%d); (2+)",
+	sprintf(g_dasm_str, "cas2.l  D%d:D%d, D%d:D%d, (%c%d):(%c%d); (2+)",
 		(extension>>16)&7, extension&7, (extension>>22)&7, (extension>>6)&7,
 		BIT_1F(extension) ? 'A' : 'D', (extension>>28)&7,
 		BIT_F(extension) ? 'A' : 'D', (extension>>12)&7);
