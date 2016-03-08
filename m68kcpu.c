@@ -765,6 +765,7 @@ void m68k_pulse_reset(void)
 	SET_CYCLES(0);
 
 	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
+	CPU_INSTR_MODE = INSTRUCTION_YES;
 
 	/* Turn off tracing */
 	FLAG_T1 = FLAG_T0 = 0;
