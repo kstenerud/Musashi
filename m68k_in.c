@@ -9231,6 +9231,7 @@ M68KMAKE_OP(scc, 8, ., d)
 	if(M68KMAKE_CC)
 	{
 		DY |= 0xff;
+		USE_CYCLES(CYC_SCC_R_TRUE);
 		return;
 	}
 	DY &= 0xffffff00;

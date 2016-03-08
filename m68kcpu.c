@@ -578,7 +578,7 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 			CYC_BCC_NOTAKE_W = 2;
 			CYC_DBCC_F_NOEXP = -2;
 			CYC_DBCC_F_EXP   = 2;
-			CYC_SCC_R_FALSE  = 2;
+			CYC_SCC_R_TRUE   = 2;
 			CYC_MOVEM_W      = 2;
 			CYC_MOVEM_L      = 3;
 			CYC_SHIFT        = 1;
@@ -594,7 +594,7 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 			CYC_BCC_NOTAKE_W = 0;
 			CYC_DBCC_F_NOEXP = 0;
 			CYC_DBCC_F_EXP   = 6;
-			CYC_SCC_R_FALSE  = 0;
+			CYC_SCC_R_TRUE   = 0;
 			CYC_MOVEM_W      = 2;
 			CYC_MOVEM_L      = 3;
 			CYC_SHIFT        = 1;
@@ -610,7 +610,7 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 			CYC_BCC_NOTAKE_W = 0;
 			CYC_DBCC_F_NOEXP = 0;
 			CYC_DBCC_F_EXP   = 4;
-			CYC_SCC_R_FALSE  = 0;
+			CYC_SCC_R_TRUE   = 0;
 			CYC_MOVEM_W      = 2;
 			CYC_MOVEM_L      = 2;
 			CYC_SHIFT        = 0;
@@ -626,7 +626,7 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 			CYC_BCC_NOTAKE_W = 0;
 			CYC_DBCC_F_NOEXP = 0;
 			CYC_DBCC_F_EXP   = 4;
-			CYC_SCC_R_FALSE  = 0;
+			CYC_SCC_R_TRUE   = 0;
 			CYC_MOVEM_W      = 2;
 			CYC_MOVEM_L      = 2;
 			CYC_SHIFT        = 0;

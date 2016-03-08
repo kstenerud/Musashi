@@ -348,7 +348,7 @@
 #define CYC_BCC_NOTAKE_W m68ki_cpu.cyc_bcc_notake_w
 #define CYC_DBCC_F_NOEXP m68ki_cpu.cyc_dbcc_f_noexp
 #define CYC_DBCC_F_EXP   m68ki_cpu.cyc_dbcc_f_exp
-#define CYC_SCC_R_FALSE  m68ki_cpu.cyc_scc_r_false
+#define CYC_SCC_R_TRUE   m68ki_cpu.cyc_scc_r_true
 #define CYC_MOVEM_W      m68ki_cpu.cyc_movem_w
 #define CYC_MOVEM_L      m68ki_cpu.cyc_movem_l
 #define CYC_SHIFT        m68ki_cpu.cyc_shift
@@ -829,7 +829,7 @@ typedef struct
 	uint cyc_bcc_notake_w;
 	uint cyc_dbcc_f_noexp;
 	uint cyc_dbcc_f_exp;
-	uint cyc_scc_r_false;
+	uint cyc_scc_r_true;
 	uint cyc_movem_w;
 	uint cyc_movem_l;
 	uint cyc_shift;
