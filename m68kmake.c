@@ -347,7 +347,7 @@ int g_jmp_cycle_table[13] =
 	 0, /* EA_MODE_PD   */
 	 0, /* EA_MODE_PD7  */
 	 6, /* EA_MODE_DI   */
-	 8, /* EA_MODE_IX   */
+	 10, /* EA_MODE_IX   */
 	 6, /* EA_MODE_AW   */
 	 8, /* EA_MODE_AL   */
 	 6, /* EA_MODE_PCDI */
