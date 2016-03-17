@@ -692,17 +692,17 @@ move      32  tou   .     0100111001100...  ..........  S S S    4   6   2
 movec     32  cr    .     0100111001111010  ..........  . S S    .  12   6
 movec     32  rc    .     0100111001111011  ..........  . S S    .  10  12
 movem     16  re    pd    0100100010100...  ..........  U U U    8   8   4
-movem     16  re    .     0100100010......  A..DXWL...  U U U    4   4   4  cycles for hypotetical d addressing mode
+movem     16  re    .     0100100010......  A..DXWL...  U U U    4   4   4  cycles for hypothetical d addressing mode (020 unverified)
 movem     32  re    pd    0100100011100...  ..........  U U U    8   8   4
-movem     32  re    .     0100100011......  A..DXWL...  U U U    0   0   4  cycles for hypotetical d addressing mode
+movem     32  re    .     0100100011......  A..DXWL...  U U U    0   0   4  cycles for hypothetical d addressing mode (020 unverified)
 movem     16  er    pi    0100110010011...  ..........  U U U   12  12   8
 movem     16  er    pcdi  0100110010111010  ..........  U U U   16  16   9
 movem     16  er    pcix  0100110010111011  ..........  U U U   18  18  11
-movem     16  er    .     0100110010......  A..DXWL...  U U U    8   8   8  cycles for hypotetical d addressing mode
+movem     16  er    .     0100110010......  A..DXWL...  U U U    8   8   8  cycles for hypothetical d addressing mode (020 unverified)
 movem     32  er    pi    0100110011011...  ..........  U U U   12  12   8
 movem     32  er    pcdi  0100110011111010  ..........  U U U   16  16   9
 movem     32  er    pcix  0100110011111011  ..........  U U U   18  18  11
-movem     32  er    .     0100110011......  A..DXWL...  U U U    4   4   8  cycles for hypotetical d addressing mode
+movem     32  er    .     0100110011......  A..DXWL...  U U U    4   4   8  cycles for hypothetical d addressing mode (020 unverified)
 movep     16  er    .     0000...100001...  ..........  U U U   16  16  12
 movep     32  er    .     0000...101001...  ..........  U U U   24  24  18
 movep     16  re    .     0000...110001...  ..........  U U U   16  16  11
