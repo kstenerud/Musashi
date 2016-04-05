@@ -395,7 +395,7 @@ int g_lea_cycle_table[13] =
 int g_pea_cycle_table[13] =
 {
 	 0, /* EA_MODE_NONE */
-	 4, /* EA_MODE_AI   */
+	 6, /* EA_MODE_AI   */
 	 0, /* EA_MODE_PI   */
 	 0, /* EA_MODE_PI7  */
 	 0, /* EA_MODE_PD   */
