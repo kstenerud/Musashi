@@ -1725,8 +1725,8 @@ INLINE void m68ki_exception_trap(uint vector)
 
 	m68ki_jump_vector(vector);
 
-	/* Use up some clock cycles */
-	USE_CYCLES(CYC_EXCEPTION[vector]);
+	/* Use up some clock cycles and undo the instruction's cycles */
+	USE_CYCLES(CYC_EXCEPTION[vector] - CYC_INSTRUCTION[REG_IR]);
 }
 
 /* Trap#n stacks a 0 frame but behaves like group2 otherwise */
