@@ -523,6 +523,13 @@
 				CPU_INT_CYCLES = 0; \
 				return m68ki_initial_cycles; \
 			} \
+			/* ensure we don't re-enter execution loop after an
+			   address error if there's no more cycles remaining */ \
+			if(GET_CYCLES() <= 0) \
+			{ \
+				/* return how many clocks we used */ \
+				return m68ki_initial_cycles - GET_CYCLES(); \
+			} \
 		}
 
 	#define m68ki_check_address_error(ADDR, WRITE_MODE, FC) \
@@ -1881,8 +1888,11 @@ m68k_read_memory_8(0x00ffff01);
 
 	m68ki_jump_vector(EXCEPTION_ADDRESS_ERROR);
 
-	/* Use up some clock cycles and undo the instruction's cycles */
-	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_ADDRESS_ERROR] - CYC_INSTRUCTION[REG_IR]);
+	/* Use up some clock cycles. Note that we don't need to undo the 
+	instruction's cycles here as we've longjmp:ed directly from the
+	instruction handler without passing the part of the excecute loop
+	that deducts instruction cycles */
+	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_ADDRESS_ERROR]); 
 }
 
 
