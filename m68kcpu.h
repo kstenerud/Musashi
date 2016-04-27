@@ -523,6 +523,13 @@
 				CPU_INT_CYCLES = 0; \
 				return m68ki_initial_cycles; \
 			} \
+			/* ensure we don't re-enter execution loop after an
+			   address error if there's no more cycles remaining */ \
+			if(GET_CYCLES() <= 0) \
+			{ \
+				/* return how many clocks we used */ \
+				return m68ki_initial_cycles - GET_CYCLES(); \
+			} \
 		}
 
 	#define m68ki_check_address_error(ADDR, WRITE_MODE, FC) \
