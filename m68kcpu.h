@@ -1743,8 +1743,8 @@ INLINE void m68ki_exception_trapN(uint vector)
 	m68ki_stack_frame_0000(REG_PC, sr, vector);
 	m68ki_jump_vector(vector);
 
-	/* Use up some clock cycles */
-	USE_CYCLES(CYC_EXCEPTION[vector]);
+	/* Use up some clock cycles and undo the instruction's cycles */
+	USE_CYCLES(CYC_EXCEPTION[vector] - CYC_INSTRUCTION[REG_IR]);
 }
 
 /* Exception for trace mode */
