@@ -1807,7 +1807,7 @@ M68KMAKE_OP(andi, 32, ., .)
 }
 
 
-M68KMAKE_OP(andi, 8, toc, .)
+M68KMAKE_OP(andi, 16, toc, .)
 {
 	m68ki_set_ccr(m68ki_get_ccr() & OPER_I_8());
 }
@@ -5127,7 +5127,7 @@ M68KMAKE_OP(eori, 32, ., .)
 }
 
 
-M68KMAKE_OP(eori, 8, toc, .)
+M68KMAKE_OP(eori, 16, toc, .)
 {
 	m68ki_set_ccr(m68ki_get_ccr() ^ OPER_I_8());
 }
@@ -8090,7 +8090,7 @@ M68KMAKE_OP(ori, 32, ., .)
 }
 
 
-M68KMAKE_OP(ori, 8, toc, .)
+M68KMAKE_OP(ori, 16, toc, .)
 {
 	m68ki_set_ccr(m68ki_get_ccr() | OPER_I_8());
 }

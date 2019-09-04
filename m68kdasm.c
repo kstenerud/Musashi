@@ -129,6 +129,15 @@
 #define EXT_OUTER_DISPLACEMENT_LONG(A)    (((A)&3) == 3 && ((A)&0x47) < 0x44)
 
 
+/* Opcode flags */
+#if M68K_COMPILE_FOR_MAME == OPT_ON
+#define SET_OPCODE_FLAGS(x)	g_opcode_type = x;
+#define COMBINE_OPCODE_FLAGS(x) ((x) | g_opcode_type | DASMFLAG_SUPPORTED)
+#else
+#define SET_OPCODE_FLAGS(x)
+#define COMBINE_OPCODE_FLAGS(X) (X)
+#endif
+
 
 /* ======================================================================== */
 /* =============================== PROTOTYPES ============================= */
@@ -201,6 +210,7 @@ static char g_helper_str[100]; /* string to hold helpful info */
 static uint g_cpu_pc;        /* program counter */
 static uint g_cpu_ir;        /* instruction register */
 static uint g_cpu_type;
+static uint g_opcode_type;
 
 /* used by ops like asr, ror, addq, etc */
 static uint g_3bit_qdata_table[8] = {8, 1, 2, 3, 4, 5, 6, 7};
@@ -1121,12 +1131,14 @@ static void d68000_bsr_8(void)
 {
 	uint temp_pc = g_cpu_pc;
 	sprintf(g_dasm_str, "bsr     %x", temp_pc + make_int_8(g_cpu_ir));
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_bsr_16(void)
 {
 	uint temp_pc = g_cpu_pc;
 	sprintf(g_dasm_str, "bsr     %x", temp_pc + make_int_16(read_imm_16()));
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68020_bsr_32(void)
@@ -1134,6 +1146,7 @@ static void d68020_bsr_32(void)
 	uint temp_pc = g_cpu_pc;
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	sprintf(g_dasm_str, "bsr     %x; (2+)", temp_pc + peek_imm_32());
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_btst_r(void)
@@ -1211,12 +1224,14 @@ static void d68020_cas2_32(void)
 static void d68000_chk_16(void)
 {
 	sprintf(g_dasm_str, "chk.w   %s, D%d", get_ea_mode_str_16(g_cpu_ir), (g_cpu_ir>>9)&7);
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68020_chk_32(void)
 {
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	sprintf(g_dasm_str, "chk.l   %s, D%d; (2+)", get_ea_mode_str_32(g_cpu_ir), (g_cpu_ir>>9)&7);
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68020_chk2_cmp2_8(void)
@@ -1500,12 +1515,14 @@ static void d68000_dbra(void)
 {
 	uint temp_pc = g_cpu_pc;
 	sprintf(g_dasm_str, "dbra    D%d, %x", g_cpu_ir & 7, temp_pc + make_int_16(read_imm_16()));
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_dbcc(void)
 {
 	uint temp_pc = g_cpu_pc;
 	sprintf(g_dasm_str, "db%-2s    D%d, %x", g_cc[(g_cpu_ir>>8)&0xf], g_cpu_ir & 7, temp_pc + make_int_16(read_imm_16()));
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_divs(void)
@@ -1614,6 +1631,7 @@ static void d68000_jmp(void)
 static void d68000_jsr(void)
 {
 	sprintf(g_dasm_str, "jsr     %s", get_ea_mode_str_32(g_cpu_ir));
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_lea(void)
@@ -2524,27 +2542,32 @@ static void d68010_rtd(void)
 {
 	LIMIT_CPU_TYPES(M68010_PLUS);
 	sprintf(g_dasm_str, "rtd     %s; (1+)", get_imm_str_s16());
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OUT);
 }
 
 static void d68000_rte(void)
 {
 	sprintf(g_dasm_str, "rte");
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OUT);
 }
 
 static void d68020_rtm(void)
 {
 	LIMIT_CPU_TYPES(M68020_ONLY);
 	sprintf(g_dasm_str, "rtm     %c%d; (2+)", BIT_3(g_cpu_ir) ? 'A' : 'D', g_cpu_ir&7);
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OUT);
 }
 
 static void d68000_rtr(void)
 {
 	sprintf(g_dasm_str, "rtr");
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OUT);
 }
 
 static void d68000_rts(void)
 {
 	sprintf(g_dasm_str, "rts");
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OUT);
 }
 
 static void d68000_sbcd_rr(void)
@@ -2689,23 +2712,27 @@ static void d68020_trapcc_0(void)
 {
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	sprintf(g_dasm_str, "trap%-2s; (2+)", g_cc[(g_cpu_ir>>8)&0xf]);
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68020_trapcc_16(void)
 {
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	sprintf(g_dasm_str, "trap%-2s  %s; (2+)", g_cc[(g_cpu_ir>>8)&0xf], get_imm_str_u16());
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68020_trapcc_32(void)
 {
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	sprintf(g_dasm_str, "trap%-2s  %s; (2+)", g_cc[(g_cpu_ir>>8)&0xf], get_imm_str_u32());
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_trapv(void)
 {
 	sprintf(g_dasm_str, "trapv");
+	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_tst_8(void)
@@ -3280,9 +3307,10 @@ unsigned int m68k_disassemble(char* str_buff, unsigned int pc, unsigned int cpu_
 	g_cpu_pc = pc;
 	g_helper_str[0] = 0;
 	g_cpu_ir = read_imm_16();
+	g_opcode_type = 0;
 	g_instruction_table[g_cpu_ir]();
 	sprintf(str_buff, "%s%s", g_dasm_str, g_helper_str);
-	return g_cpu_pc - pc;
+	return COMBINE_OPCODE_FLAGS(g_cpu_pc - pc);
 }
 
 char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type)

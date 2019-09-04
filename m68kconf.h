@@ -52,7 +52,7 @@
  * to OPT_ON and use m68kmame.h to configure the 68k core.
  */
 #ifndef M68K_COMPILE_FOR_MAME
-#define M68K_COMPILE_FOR_MAME      OPT_ON
+#define M68K_COMPILE_FOR_MAME      OPT_OFF
 #endif /* M68K_COMPILE_FOR_MAME */
 
 
