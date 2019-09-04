@@ -2,17 +2,17 @@ EXENAME          = sim
 
 OSD_DOS          = osd_dos.c
 
-OSDFILES         = $(OSD_DOS)
+OSDFILES         = osd_linux.c # $(OSD_DOS)
 MAINFILES        = sim.c
 MUSASHIFILES     = m68kcpu.c m68kdasm.c
 MUSASHIGENCFILES = m68kops.c m68kopac.c m68kopdm.c m68kopnz.c
 MUSASHIGENHFILES = m68kops.h
 MUSASHIGENERATOR = m68kmake
 
-EXE = .exe
-EXEPATH = .\\
-# EXE =
-# EXEPATH = ./
+# EXE = .exe
+# EXEPATH = .\\
+EXE =
+EXEPATH = ./
 
 .CFILES   = $(MAINFILES) $(OSDFILES) $(MUSASHIFILES) $(MUSASHIGENCFILES)
 .OFILES   = $(.CFILES:%.c=%.o)
@@ -33,7 +33,7 @@ clean:
 	rm -f $(DELETEFILES)
 
 $(TARGET): $(MUSASHIGENHFILES) $(.OFILES) makefile
-	$(CC) -o $@ $(.OFILES) $(LFLAGS)
+	$(CC) -o $@ $(.OFILES) $(LFLAGS) -lm
 
 $(MUSASHIGENCFILES) $(MUSASHIGENHFILES): $(MUSASHIGENERATOR)$(EXE)
 	$(EXEPATH)$(MUSASHIGENERATOR)$(EXE)
