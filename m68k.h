@@ -241,6 +241,14 @@ void m68k_set_reset_instr_callback(void  (*callback)(void));
  */
 void m68k_set_pc_changed_callback(void  (*callback)(unsigned int new_pc));
 
+/* Set the callback for the TAS instruction.
+ * You must enable M68K_TAS_HAS_CALLBACK in m68kconf.h.
+ * The CPU calls this callback every time it encounters a TAS instruction.
+ * Default behavior: return 1, allow writeback.
+ */
+void m68k_set_tas_instr_callback(int  (*callback)(void));
+
+
 
 /* Set the callback for CPU function code changes.
  * You must enable M68K_EMULATE_FC in m68kconf.h.
@@ -344,7 +352,7 @@ unsigned int m68k_disassemble(char* str_buff, unsigned int pc, unsigned int cpu_
 /* Same as above but accepts raw opcode data directly rather than fetching
  * via the read/write interfaces.
  */
-unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, unsigned char* opdata, unsigned char* argdata, int length, unsigned int cpu_type);
+unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, const unsigned char* opdata, const unsigned char* argdata, unsigned int cpu_type);
 
 
 /* ======================================================================== */

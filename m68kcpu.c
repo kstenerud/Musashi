@@ -470,6 +470,22 @@ static void default_reset_instr_callback(void)
 {
 }
 
+/* Called when a cmpi.l #v, dn instruction is executed */
+static void default_cmpild_instr_callback(unsigned int val, int reg)
+{
+}
+
+/* Called when a rte instruction is executed */
+static void default_rte_instr_callback(void)
+{
+}
+
+/* Called when a tas instruction is executed */
+static int default_tas_instr_callback(void)
+{
+	return 1; // allow writeback
+}
+
 /* Called when the program counter changed by a large value */
 static unsigned int default_pc_changed_callback_data;
 static void default_pc_changed_callback(unsigned int new_pc)
@@ -626,6 +642,21 @@ void m68k_set_bkpt_ack_callback(void  (*callback)(unsigned int data))
 void m68k_set_reset_instr_callback(void  (*callback)(void))
 {
 	CALLBACK_RESET_INSTR = callback ? callback : default_reset_instr_callback;
+}
+
+void m68k_set_cmpild_instr_callback(void  (*callback)(unsigned int, int))
+{
+	CALLBACK_CMPILD_INSTR = callback ? callback : default_cmpild_instr_callback;
+}
+
+void m68k_set_rte_instr_callback(void  (*callback)(void))
+{
+	CALLBACK_RTE_INSTR = callback ? callback : default_rte_instr_callback;
+}
+
+void m68k_set_tas_instr_callback(int  (*callback)(void))
+{
+	CALLBACK_TAS_INSTR = callback ? callback : default_tas_instr_callback;
 }
 
 void m68k_set_pc_changed_callback(void  (*callback)(unsigned int new_pc))
@@ -848,6 +879,9 @@ void m68k_init(void)
 	m68k_set_int_ack_callback(NULL);
 	m68k_set_bkpt_ack_callback(NULL);
 	m68k_set_reset_instr_callback(NULL);
+	m68k_set_cmpild_instr_callback(NULL);
+	m68k_set_rte_instr_callback(NULL);
+	m68k_set_tas_instr_callback(NULL);
 	m68k_set_pc_changed_callback(NULL);
 	m68k_set_fc_callback(NULL);
 	m68k_set_instr_hook_callback(NULL);

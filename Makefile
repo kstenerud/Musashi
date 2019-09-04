@@ -2,7 +2,7 @@
 # compiles the .o and the generator
 
 MUSASHIFILES     = m68kcpu.c m68kdasm.c
-MUSASHIGENCFILES = m68kops.c m68kopac.c m68kopdm.c m68kopnz.c
+MUSASHIGENCFILES = m68kops.c
 MUSASHIGENHFILES = m68kops.h
 MUSASHIGENERATOR = m68kmake
 

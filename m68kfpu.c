@@ -12,6 +12,71 @@ static void fatalerror(char *format, ...) {
       exit(1);
 }
 
+#define FPCC_N			0x08000000
+#define FPCC_Z			0x04000000
+#define FPCC_I			0x02000000
+#define FPCC_NAN		0x01000000
+
+#define DOUBLE_INFINITY					(unsigned long long)(0x7ff0000000000000)
+#define DOUBLE_EXPONENT					(unsigned long long)(0x7ff0000000000000)
+#define DOUBLE_MANTISSA					(unsigned long long)(0x000fffffffffffff)
+
+INLINE void SET_CONDITION_CODES(fp_reg reg)
+{
+	REG_FPSR &= ~(FPCC_N|FPCC_Z|FPCC_I|FPCC_NAN);
+
+	// sign flag
+	if (reg.i & (unsigned long long)(0x8000000000000000))
+	{
+		REG_FPSR |= FPCC_N;
+	}
+
+	// zero flag
+	if ((reg.i & (unsigned long long)(0x7fffffffffffffff)) == 0)
+	{
+		REG_FPSR |= FPCC_Z;
+	}
+
+	// infinity flag
+	if ((reg.i & (unsigned long long)(0x7fffffffffffffff)) == DOUBLE_INFINITY)
+	{
+		REG_FPSR |= FPCC_I;
+	}
+
+	// NaN flag
+	if (((reg.i & DOUBLE_EXPONENT) == DOUBLE_EXPONENT) && ((reg.i & DOUBLE_MANTISSA) != 0))
+	{
+		REG_FPSR |= FPCC_NAN;
+	}
+}
+
+INLINE int TEST_CONDITION(int condition)
+{
+	int n = (REG_FPSR & FPCC_N) != 0;
+	int z = (REG_FPSR & FPCC_Z) != 0;
+	int nan = (REG_FPSR & FPCC_NAN) != 0;
+	int r = 0;
+	switch (condition)
+	{
+		case 0x00:		return 0;							// False
+		case 0x01:		return (z);							// Equal
+		case 0x0e:		return (!z);						// Not Equal
+		case 0x0f:		return 1;							// True
+		case 0x12:		return (!(nan || z || n));			// Greater Than
+		case 0x13:		return (z || !(nan || n));			// Greater or Equal
+		case 0x14:		return (n && !(nan || z));			// Less Than
+		case 0x15:		return (z || (n && !nan));			// Less Than or Equal
+		case 0x1a:		return (nan || !(n || z));			// Not Less Than or Equal
+		case 0x1b:		return (nan || z || !n);			// Not Less Than
+		case 0x1c:		return (nan || (n && !z));			// Not Greater or Equal Than
+		case 0x1d:		return (nan || z || n);				// Not Greater Than
+
+		default:		fatalerror("M68040: test_condition: unhandled condition %02X\n", condition);
+	}
+
+	return r;
+}
+
 static uint8 READ_EA_8(int ea)
 {
 	int mode = (ea >> 3) & 0x7;
@@ -67,6 +132,11 @@ static uint16 READ_EA_16(int ea)
 		{
 			return (uint16)(REG_D[reg]);
 		}
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			return m68ki_read_16(ea);
+		}
 		case 5:		// (d16, An)
 		{
 			uint32 ea = EA_AY_DI_16();
@@ -76,6 +146,26 @@ static uint16 READ_EA_16(int ea)
 		{
 			uint32 ea = EA_AY_IX_16();
 			return m68ki_read_16(ea);
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					return m68ki_read_16(ea);
+				}
+				case 4:		// #<data>
+				{
+					return OPER_I_16();
+				}
+
+				default:	fatalerror("MC68040: READ_EA_16: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
 		}
 		default:	fatalerror("MC68040: READ_EA_16: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
@@ -270,6 +360,13 @@ static void WRITE_EA_64(int ea, uint64 data)
 
 	switch (mode)
 	{
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			m68ki_write_32(ea, (uint32)(data >> 32));
+			m68ki_write_32(ea, (uint32)(data));
+			break;
+		}
 		case 4:		// -(An)
 		{
 			uint32 ea;
@@ -413,21 +510,21 @@ static void fpgen_rm_reg(uint16 w2)
 		case 0x04:		// FSQRT
 		{
 			REG_FP[dst].f = sqrt(source);
-			// TODO: condition codes
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(109);
 			break;
 		}
 		case 0x18:		// FABS
 		{
 			REG_FP[dst].f = fabs(source);
-			// TODO: condition codes
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(3);
 			break;
 		}
 		case 0x1a:		// FNEG
 		{
 			REG_FP[dst].f = -source;
-			// TODO: condition codes
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(3);
 			break;
 		}
@@ -440,33 +537,37 @@ static void fpgen_rm_reg(uint16 w2)
 		case 0x22:		// FADD
 		{
 			REG_FP[dst].f += source;
-			// TODO: condition codes
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(9);
 			break;
 		}
 		case 0x23:		// FMUL
 		{
 			REG_FP[dst].f *= source;
-			// TODO: condition codes
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(11);
 			break;
 		}
 		case 0x28:		// FSUB
 		{
 			REG_FP[dst].f -= source;
-			// TODO: condition codes
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(9);
 			break;
 		}
 		case 0x38:		// FCMP
 		{
-			// TODO: condition codes !!!
+			fp_reg res;
+			res.f = REG_FP[dst].f - source;
+			SET_CONDITION_CODES(res);
 			USE_CYCLES(7);
 			break;
 		}
 		case 0x3a:		// FTST
 		{
-			// TODO: condition codes !!!
+			fp_reg res;
+			res.f = source;
+			SET_CONDITION_CODES(res);
 			USE_CYCLES(7);
 			break;
 		}
@@ -613,22 +714,36 @@ static void fmovem(uint16 w2)
 	}
 }
 
-static void fbcc(void)
+static void fbcc16(void)
 {
-	sint32 disp;
-//  int condition = REG_IR & 0x3f;
-	int size = (REG_IR >> 6) & 0x1;
+	sint32 offset;
+	int condition = REG_IR & 0x3f;
 
-	if (size)	// 32-bit displacement
-	{
-		disp = OPER_I_32();
-	}
-	else
-	{
-		disp = (sint16)(OPER_I_16());
-	}
+	offset = (sint16)(OPER_I_16());
 
 	// TODO: condition and jump!!!
+	if (TEST_CONDITION(condition))
+	{
+		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
+		m68ki_branch_16(offset-2);
+	}
+
+	USE_CYCLES(7);
+	}
+
+static void fbcc32(void)
+{
+	sint32 offset;
+	int condition = REG_IR & 0x3f;
+
+	offset = OPER_I_32();
+
+	// TODO: condition and jump!!!
+	if (TEST_CONDITION(condition))
+	{
+		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
+		m68ki_branch_32(offset-4);
+	}
 
 	USE_CYCLES(7);
 }
@@ -676,9 +791,13 @@ void m68040_fpu_op0(void)
 		}
 
 		case 2:		// FBcc disp16
+		{
+			fbcc16();
+			break;
+		}
 		case 3:		// FBcc disp32
 		{
-			fbcc();
+			fbcc32();
 			break;
 		}
 

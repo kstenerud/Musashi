@@ -211,9 +211,8 @@ static uint g_cpu_pc;        /* program counter */
 static uint g_cpu_ir;        /* instruction register */
 static uint g_cpu_type;
 static uint g_opcode_type;
-static unsigned char* g_rawop;
+static const unsigned char* g_rawop;
 static uint g_rawbasepc;
-static uint g_rawlength;
 
 /* used by ops like asr, ror, addq, etc */
 static uint g_3bit_qdata_table[8] = {8, 1, 2, 3, 4, 5, 6, 7};
@@ -3497,13 +3496,12 @@ char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type)
 	return buff;
 }
 
-unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, unsigned char* opdata, unsigned char* argdata, int length, unsigned int cpu_type)
+unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, const unsigned char* opdata, const unsigned char* argdata, unsigned int cpu_type)
 {
 	unsigned int result;
 
 	g_rawop = opdata;
 	g_rawbasepc = pc;
-	g_rawlength = length;
 	result = m68k_disassemble(str_buff, pc, cpu_type);
 	g_rawop = NULL;
 	return result;

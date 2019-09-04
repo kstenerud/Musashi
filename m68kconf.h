@@ -110,6 +110,24 @@
 #define M68K_EMULATE_RESET          OPT_OFF
 #define M68K_RESET_CALLBACK()       your_reset_handler_function()
 
+/* If ON, CPU will call the callback when it encounters a cmpi.l #v, dn
+ * instruction.
+ */
+#define M68K_CMPILD_HAS_CALLBACK     OPT_OFF
+#define M68K_CMPILD_CALLBACK(v,r)    your_cmpild_handler_function(v,r)
+
+
+/* If ON, CPU will call the callback when it encounters a rte
+ * instruction.
+ */
+#define M68K_RTE_HAS_CALLBACK       OPT_OFF
+#define M68K_RTE_CALLBACK()         your_rte_handler_function()
+
+/* If ON, CPU will call the callback when it encounters a tas
+ * instruction.
+ */
+#define M68K_TAS_HAS_CALLBACK       OPT_OFF
+#define M68K_TAS_CALLBACK()         your_tas_handler_function()
 
 /* If ON, CPU will call the set fc callback on every memory access to
  * differentiate between user/supervisor, program/data access like a real
@@ -119,7 +137,6 @@
  */
 #define M68K_EMULATE_FC             OPT_OFF
 #define M68K_SET_FC_CALLBACK(A)     your_set_fc_handler_function(A)
-
 
 /* If ON, CPU will call the pc changed callback when it changes the PC by a
  * large value.  This allows host programs to be nicer when it comes to

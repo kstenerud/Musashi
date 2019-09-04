@@ -4223,6 +4223,7 @@ M68KMAKE_OP(cmpi, 32, ., d)
 	uint dst = DY;
 	uint res = dst - src;
 
+	m68ki_cmpild_callback(src, REG_IR & 7);		   /* auto-disable (see m68kcpu.h) */
 	FLAG_N = NFLAG_32(res);
 	FLAG_Z = MASK_OUT_ABOVE_32(res);
 	FLAG_V = VFLAG_SUB_32(src, dst, res);
@@ -6437,7 +6438,8 @@ M68KMAKE_OP(move, 32, pd, d)
 	uint res = DY;
 	uint ea = EA_AX_PD_32();
 
-	m68ki_write_32(ea, res);
+	m68ki_write_16(ea+2, res & 0xFFFF );
+	m68ki_write_16(ea, (res >> 16) & 0xFFFF );
 
 	FLAG_N = NFLAG_32(res);
 	FLAG_Z = res;
@@ -6451,7 +6453,8 @@ M68KMAKE_OP(move, 32, pd, a)
 	uint res = AY;
 	uint ea = EA_AX_PD_32();
 
-	m68ki_write_32(ea, res);
+	m68ki_write_16(ea+2, res & 0xFFFF );
+	m68ki_write_16(ea, (res >> 16) & 0xFFFF );
 
 	FLAG_N = NFLAG_32(res);
 	FLAG_Z = res;
@@ -6465,7 +6468,8 @@ M68KMAKE_OP(move, 32, pd, .)
 	uint res = M68KMAKE_GET_OPER_AY_32;
 	uint ea = EA_AX_PD_32();
 
-	m68ki_write_32(ea, res);
+	m68ki_write_16(ea+2, res & 0xFFFF );
+	m68ki_write_16(ea, (res >> 16) & 0xFFFF );
 
 	FLAG_N = NFLAG_32(res);
 	FLAG_Z = res;
@@ -7104,7 +7108,8 @@ M68KMAKE_OP(movem, 32, re, pd)
 		if(register_list & (1 << i))
 		{
 			ea -= 4;
-			m68ki_write_32(ea, REG_DA[15-i]);
+			m68ki_write_16(ea+2, REG_DA[15-i] & 0xFFFF );
+			m68ki_write_16(ea, (REG_DA[15-i] >> 16) & 0xFFFF );
 			count++;
 		}
 	AY = ea;
@@ -9170,6 +9175,7 @@ M68KMAKE_OP(rte, 32, ., .)
 		uint new_pc;
 		uint format_word;
 
+		m68ki_rte_callback();		   /* auto-disable (see m68kcpu.h) */
 		m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
 
 		if(CPU_TYPE_IS_000(CPU_TYPE))
@@ -10092,12 +10098,20 @@ M68KMAKE_OP(tas, 8, ., .)
 {
 	uint ea = M68KMAKE_GET_EA_AY_8;
 	uint dst = m68ki_read_8(ea);
+	uint allow_writeback;
 
 	FLAG_Z = dst;
 	FLAG_N = NFLAG_8(dst);
 	FLAG_V = VFLAG_CLEAR;
 	FLAG_C = CFLAG_CLEAR;
-	m68ki_write_8(ea, dst | 0x80);
+
+	/* The Genesis/Megadrive games Gargoyles and Ex-Mutants need the TAS writeback
+       disabled in order to function properly.  Some Amiga software may also rely
+       on this, but only when accessing specific addresses so additional functionality
+       will be needed. */
+	allow_writeback = m68ki_tas_callback();
+
+	if (allow_writeback==1) m68ki_write_8(ea, dst | 0x80);
 }
 
 
