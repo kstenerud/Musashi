@@ -491,7 +491,7 @@ void disassemble_program()
 	fflush(stdout);
 }
 
-void cpu_instr_callback()
+void cpu_instr_callback(int pc)
 {
 /* The following code would print out instructions as they are executed */
 /*

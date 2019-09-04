@@ -506,7 +506,7 @@
 		#define m68ki_instr_hook(pc) CALLBACK_INSTR_HOOK(pc)
 	#endif
 #else
-	#define m68ki_instr_hook()
+	#define m68ki_instr_hook(pc)
 #endif /* M68K_INSTRUCTION_HOOK */
 
 #if M68K_MONITOR_PC
