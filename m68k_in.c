@@ -279,6 +279,8 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 M68KMAKE_OPCODE_HANDLER_HEADER
 
 #include "m68kcpu.h"
+extern void m68040_fpu_op0(void);
+extern void m68040_fpu_op1(void);
 
 /* ======================================================================== */
 /* ========================= INSTRUCTION HANDLERS ========================= */
@@ -374,6 +376,8 @@ name    size  proc   ea   bit pattern       A+-DXWLdxI  0 1 2 4  000 010 020 040
 M68KMAKE_TABLE_START
 1010       0  .     .     1010............  ..........  U U U U   4   4   4   4
 1111       0  .     .     1111............  ..........  U U U U   4   4   4   4
+040fpu0   32  .     .     11110010........  ..........  . . . U   .   .   .   0
+040fpu1   32  .     .     11110011........  ..........  . . . U   .   .   .   0
 abcd       8  rr    .     1100...100000...  ..........  U U U U   6   6   4   4
 abcd       8  mm    ax7   1100111100001...  ..........  U U U U  18  18  16  16
 abcd       8  mm    ay7   1100...100001111  ..........  U U U U  18  18  16  16
@@ -452,7 +456,7 @@ asl       32  r     .     1110...110100...  ..........  U U U U   8   8   8   8
 asl       16  .     .     1110000111......  A+-DXWL...  U U U U   8   8   6   6
 bcc        8  .     .     0110............  ..........  U U U U  10  10   6   6
 bcc       16  .     .     0110....00000000  ..........  U U U U  10  10   6   6
-bcc       32  .     .     0110....11111111  ..........  . . U U   .   .   6   6
+bcc       32  .     .     0110....11111111  ..........  U U U U  10  10   6   6
 bchg       8  r     .     0000...101......  A+-DXWL...  U U U U   8   8   4   4
 bchg      32  r     d     0000...101000...  ..........  U U U U   8   8   4   4
 bchg       8  s     .     0000100001......  A+-DXWL...  U U U U  12  12   4   4
@@ -480,14 +484,14 @@ bftst     32  .     .     1110100011......  A..DXWLdx.  . . U U   .   .  13  13
 bkpt       0  .     .     0100100001001...  ..........  . U U U   .  10  10  10
 bra        8  .     .     01100000........  ..........  U U U U  10  10  10  10
 bra       16  .     .     0110000000000000  ..........  U U U U  10  10  10  10
-bra       32  .     .     0110000011111111  ..........  U U U U   .   .  10  10
+bra       32  .     .     0110000011111111  ..........  U U U U  10  10  10  10
 bset      32  r     d     0000...111000...  ..........  U U U U   8   8   4   4
 bset       8  r     .     0000...111......  A+-DXWL...  U U U U   8   8   4   4
 bset       8  s     .     0000100011......  A+-DXWL...  U U U U  12  12   4   4
 bset      32  s     d     0000100011000...  ..........  U U U U  12  12   4   4
 bsr        8  .     .     01100001........  ..........  U U U U  18  18   7   7
 bsr       16  .     .     0110000100000000  ..........  U U U U  18  18   7   7
-bsr       32  .     .     0110000111111111  ..........  . . U U   .   .   7   7
+bsr       32  .     .     0110000111111111  ..........  U U U U  18  18   7   7
 btst       8  r     .     0000...100......  A+-DXWLdxI  U U U U   4   4   4   4
 btst      32  r     d     0000...100000...  ..........  U U U U   6   6   4   4
 btst       8  s     .     0000100000......  A+-DXWLdx.  U U U U   8   8   4   4
@@ -903,6 +907,29 @@ M68KMAKE_OP(1111, 0, ., .)
 {
 	m68ki_exception_1111();
 }
+
+
+M68KMAKE_OP(040fpu0, 32, ., .)
+{
+	if(CPU_TYPE_IS_040_PLUS(CPU_TYPE))
+	{
+		m68040_fpu_op0();
+		return;
+	}
+	m68ki_exception_1111();
+}
+
+
+M68KMAKE_OP(040fpu1, 32, ., .)
+{
+	if(CPU_TYPE_IS_040_PLUS(CPU_TYPE))
+	{
+		m68040_fpu_op1();
+		return;
+	}
+	m68ki_exception_1111();
+}
+
 
 
 M68KMAKE_OP(abcd, 8, rr, .)
@@ -2279,7 +2306,16 @@ M68KMAKE_OP(bcc, 32, ., .)
 		REG_PC += 4;
 		return;
 	}
-	m68ki_exception_illegal();
+	else
+	{
+		if(M68KMAKE_CC)
+		{
+			m68ki_trace_t0();			   /* auto-disable (see m68kcpu.h) */
+			m68ki_branch_8(MASK_OUT_ABOVE_8(REG_IR));
+			return;
+		}
+		USE_CYCLES(CYC_BCC_NOTAKE_B);
+	}
 }
 
 
@@ -3123,7 +3159,13 @@ M68KMAKE_OP(bra, 32, ., .)
 			USE_ALL_CYCLES();
 		return;
 	}
-	m68ki_exception_illegal();
+	else
+	{
+		m68ki_trace_t0();				   /* auto-disable (see m68kcpu.h) */
+		m68ki_branch_8(MASK_OUT_ABOVE_8(REG_IR));
+		if(REG_PC == REG_PPC)
+			USE_ALL_CYCLES();
+	}
 }
 
 
@@ -3198,7 +3240,12 @@ M68KMAKE_OP(bsr, 32, ., .)
 		m68ki_branch_32(offset);
 		return;
 	}
-	m68ki_exception_illegal();
+	else
+	{
+		m68ki_trace_t0();				   /* auto-disable (see m68kcpu.h) */
+		m68ki_push_32(REG_PC);
+		m68ki_branch_8(MASK_OUT_ABOVE_8(REG_IR));
+	}
 }
 
 

@@ -166,7 +166,7 @@
 /* If ON, the enulation core will use 64-bit integers to speed up some
  * operations.
 */
-#define M68K_USE_64_BIT  OPT_OFF
+#define M68K_USE_64_BIT  OPT_ON
 
 
 /* Set to your compiler's static inline keyword to enable it, or

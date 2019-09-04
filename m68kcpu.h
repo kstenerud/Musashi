@@ -323,6 +323,11 @@
 #define REG_CAAR         m68ki_cpu.caar
 #define REG_IR           m68ki_cpu.ir
 
+#define REG_FP           m68ki_cpu.fpr
+#define REG_FPCR         m68ki_cpu.fpcr
+#define REG_FPSR         m68ki_cpu.fpsr
+#define REG_FPIAR        m68ki_cpu.fpiar
+
 #define FLAG_T1          m68ki_cpu.t1_flag
 #define FLAG_T0          m68ki_cpu.t0_flag
 #define FLAG_S           m68ki_cpu.s_flag
@@ -550,9 +555,16 @@
 			m68ki_aerr_fc = FC; \
 			longjmp(m68ki_aerr_trap, 1); \
 		}
+
+	#define m68ki_check_address_error_010_less(ADDR, WRITE_MODE, FC) \
+		if (CPU_TYPE_IS_010_LESS(CPU_TYPE)) \
+		{ \
+			m68ki_check_address_error(ADDR, WRITE_MODE, FC) \
+		}
 #else
 	#define m68ki_set_address_error_trap()
 	#define m68ki_check_address_error(ADDR, WRITE_MODE, FC)
+	#define m68ki_check_address_error_010_less(ADDR, WRITE_MODE, FC)
 #endif /* M68K_ADDRESS_ERROR */
 
 /* Logging */
@@ -808,6 +820,12 @@
 /* =============================== PROTOTYPES ============================= */
 /* ======================================================================== */
 
+typedef union
+{
+	uint64 i;
+	double f;
+} fp_reg;
+
 typedef struct
 {
 	uint cpu_type;     /* CPU Type: 68000, 68010, 68EC020, or 68020 */
@@ -821,6 +839,10 @@ typedef struct
 	uint cacr;         /* Cache Control Register (m68020, unemulated) */
 	uint caar;         /* Cache Address Register (m68020, unemulated) */
 	uint ir;           /* Instruction Register */
+    fp_reg fpr[8];     /* FPU Data Register (m68040) */
+	uint fpiar;        /* FPU Instruction Address Register (m68040) */
+	uint fpsr;         /* FPU Status Register (m68040) */
+	uint fpcr;         /* FPU Control Register (m68040) */
 	uint t1_flag;      /* Trace 1 */
 	uint t0_flag;      /* Trace 0 */
 	uint s_flag;       /* Supervisor */
@@ -1075,13 +1097,13 @@ INLINE uint m68ki_read_8_fc(uint address, uint fc)
 INLINE uint m68ki_read_16_fc(uint address, uint fc)
 {
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	m68ki_check_address_error(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
+	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
 	return m68k_read_memory_16(ADDRESS_68K(address));
 }
 INLINE uint m68ki_read_32_fc(uint address, uint fc)
 {
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	m68ki_check_address_error(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
+	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
 	return m68k_read_memory_32(ADDRESS_68K(address));
 }
 
@@ -1093,13 +1115,13 @@ INLINE void m68ki_write_8_fc(uint address, uint fc, uint value)
 INLINE void m68ki_write_16_fc(uint address, uint fc, uint value)
 {
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	m68ki_check_address_error(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
 	m68k_write_memory_16(ADDRESS_68K(address), value);
 }
 INLINE void m68ki_write_32_fc(uint address, uint fc, uint value)
 {
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	m68ki_check_address_error(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
 	m68k_write_memory_32(ADDRESS_68K(address), value);
 }
 
@@ -1107,7 +1129,7 @@ INLINE void m68ki_write_32_fc(uint address, uint fc, uint value)
 INLINE void m68ki_write_32_pd_fc(uint address, uint fc, uint value)
 {
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	m68ki_check_address_error(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
 	m68k_write_memory_32_pd(ADDRESS_68K(address), value);
 }
 #endif

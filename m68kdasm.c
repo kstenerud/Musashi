@@ -211,6 +211,9 @@ static uint g_cpu_pc;        /* program counter */
 static uint g_cpu_ir;        /* instruction register */
 static uint g_cpu_type;
 static uint g_opcode_type;
+static unsigned char* g_rawop;
+static uint g_rawbasepc;
+static uint g_rawlength;
 
 /* used by ops like asr, ror, addq, etc */
 static uint g_3bit_qdata_table[8] = {8, 1, 2, 3, 4, 5, 6, 7};
@@ -244,17 +247,56 @@ static char* g_cpcc[64] =
 #define LIMIT_CPU_TYPES(ALLOWED_CPU_TYPES)	\
 	if(!(g_cpu_type & ALLOWED_CPU_TYPES))	\
 	{										\
-		d68000_illegal();					\
+		if((g_cpu_ir & 0xf000) == 0xf000)	\
+			d68000_1111();					\
+		else d68000_illegal();				\
 		return;								\
 	}
 
-#define read_imm_8()  (m68k_read_disassembler_16(((g_cpu_pc+=2)-2)&g_address_mask)&0xff)
-#define read_imm_16() m68k_read_disassembler_16(((g_cpu_pc+=2)-2)&g_address_mask)
-#define read_imm_32() m68k_read_disassembler_32(((g_cpu_pc+=4)-4)&g_address_mask)
+static uint dasm_read_imm_8(uint advance)
+{
+	uint result;
+	if (g_rawop)
+		result = g_rawop[g_cpu_pc + 1 - g_rawbasepc];
+	else
+		result = m68k_read_disassembler_16(g_cpu_pc & g_address_mask) & 0xff;
+	g_cpu_pc += advance;
+	return result;
+}
 
-#define peek_imm_8()  (m68k_read_disassembler_16(g_cpu_pc & g_address_mask)&0xff)
-#define peek_imm_16() m68k_read_disassembler_16(g_cpu_pc & g_address_mask)
-#define peek_imm_32() m68k_read_disassembler_32(g_cpu_pc & g_address_mask)
+static uint dasm_read_imm_16(uint advance)
+{
+	uint result;
+	if (g_rawop)
+		result = (g_rawop[g_cpu_pc + 0 - g_rawbasepc] << 8) |
+		          g_rawop[g_cpu_pc + 1 - g_rawbasepc];
+	else
+		result = m68k_read_disassembler_16(g_cpu_pc & g_address_mask) & 0xff;
+	g_cpu_pc += advance;
+	return result;
+}
+
+static uint dasm_read_imm_32(uint advance)
+{
+	uint result;
+	if (g_rawop)
+		result = (g_rawop[g_cpu_pc + 0 - g_rawbasepc] << 24) |
+		         (g_rawop[g_cpu_pc + 1 - g_rawbasepc] << 16) |
+		         (g_rawop[g_cpu_pc + 2 - g_rawbasepc] << 8) |
+		          g_rawop[g_cpu_pc + 3 - g_rawbasepc];
+	else
+		result = m68k_read_disassembler_32(g_cpu_pc & g_address_mask) & 0xff;
+	g_cpu_pc += advance;
+	return result;
+}
+
+#define read_imm_8()  dasm_read_imm_8(2)
+#define read_imm_16() dasm_read_imm_16(2)
+#define read_imm_32() dasm_read_imm_32(4)
+
+#define peek_imm_8()  dasm_read_imm_8(0)
+#define peek_imm_16() dasm_read_imm_16(0)
+#define peek_imm_32() dasm_read_imm_32(0)
 
 /* Fake a split interface */
 #define get_ea_mode_str_8(instruction) get_ea_mode_str(instruction, 0)
@@ -885,20 +927,20 @@ static void d68000_asl_ea(void)
 static void d68000_bcc_8(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "b%-2s     %x", g_cc[(g_cpu_ir>>8)&0xf], temp_pc + make_int_8(g_cpu_ir));
+	sprintf(g_dasm_str, "b%-2s     $%x", g_cc[(g_cpu_ir>>8)&0xf], temp_pc + make_int_8(g_cpu_ir));
 }
 
 static void d68000_bcc_16(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "b%-2s     %x", g_cc[(g_cpu_ir>>8)&0xf], temp_pc + make_int_16(read_imm_16()));
+	sprintf(g_dasm_str, "b%-2s     $%x", g_cc[(g_cpu_ir>>8)&0xf], temp_pc + make_int_16(read_imm_16()));
 }
 
 static void d68020_bcc_32(void)
 {
 	uint temp_pc = g_cpu_pc;
 	LIMIT_CPU_TYPES(M68020_PLUS);
-	sprintf(g_dasm_str, "b%-2s     %x; (2+)", g_cc[(g_cpu_ir>>8)&0xf], temp_pc + read_imm_32());
+	sprintf(g_dasm_str, "b%-2s     $%x; (2+)", g_cc[(g_cpu_ir>>8)&0xf], temp_pc + read_imm_32());
 }
 
 static void d68000_bchg_r(void)
@@ -1100,20 +1142,20 @@ static void d68020_bftst(void)
 static void d68000_bra_8(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "bra     %x", temp_pc + make_int_8(g_cpu_ir));
+	sprintf(g_dasm_str, "bra     $%x", temp_pc + make_int_8(g_cpu_ir));
 }
 
 static void d68000_bra_16(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "bra     %x", temp_pc + make_int_16(read_imm_16()));
+	sprintf(g_dasm_str, "bra     $%x", temp_pc + make_int_16(read_imm_16()));
 }
 
 static void d68020_bra_32(void)
 {
 	uint temp_pc = g_cpu_pc;
 	LIMIT_CPU_TYPES(M68020_PLUS);
-	sprintf(g_dasm_str, "bra     %x; (2+)", temp_pc + read_imm_32());
+	sprintf(g_dasm_str, "bra     $%x; (2+)", temp_pc + read_imm_32());
 }
 
 static void d68000_bset_r(void)
@@ -1130,14 +1172,14 @@ static void d68000_bset_s(void)
 static void d68000_bsr_8(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "bsr     %x", temp_pc + make_int_8(g_cpu_ir));
+	sprintf(g_dasm_str, "bsr     $%x", temp_pc + make_int_8(g_cpu_ir));
 	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_bsr_16(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "bsr     %x", temp_pc + make_int_16(read_imm_16()));
+	sprintf(g_dasm_str, "bsr     $%x", temp_pc + make_int_16(read_imm_16()));
 	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
@@ -1145,7 +1187,7 @@ static void d68020_bsr_32(void)
 {
 	uint temp_pc = g_cpu_pc;
 	LIMIT_CPU_TYPES(M68020_PLUS);
-	sprintf(g_dasm_str, "bsr     %x; (2+)", temp_pc + peek_imm_32());
+	sprintf(g_dasm_str, "bsr     $%x; (2+)", temp_pc + read_imm_32());
 	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
@@ -1407,7 +1449,7 @@ static void d68020_cpbcc_16(void)
 	uint new_pc = g_cpu_pc;
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	extension = read_imm_16();
-	new_pc += make_int_16(peek_imm_16());
+	new_pc += make_int_16(read_imm_16());
 	sprintf(g_dasm_str, "%db%-4s  %s; %x (extension = %x) (2-3)", (g_cpu_ir>>9)&7, g_cpcc[g_cpu_ir&0x3f], get_imm_str_s16(), new_pc, extension);
 }
 
@@ -1417,7 +1459,7 @@ static void d68020_cpbcc_32(void)
 	uint new_pc = g_cpu_pc;
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	extension = read_imm_16();
-	new_pc += peek_imm_32();
+	new_pc += read_imm_32();
 	sprintf(g_dasm_str, "%db%-4s  %s; %x (extension = %x) (2-3)", (g_cpu_ir>>9)&7, g_cpcc[g_cpu_ir&0x3f], get_imm_str_s16(), new_pc, extension);
 }
 
@@ -1429,7 +1471,7 @@ static void d68020_cpdbcc(void)
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	extension1 = read_imm_16();
 	extension2 = read_imm_16();
-	new_pc += make_int_16(peek_imm_16());
+	new_pc += make_int_16(read_imm_16());
 	sprintf(g_dasm_str, "%ddb%-4s D%d,%s; %x (extension = %x) (2-3)", (g_cpu_ir>>9)&7, g_cpcc[extension1&0x3f], g_cpu_ir&7, get_imm_str_s16(), new_pc, extension2);
 }
 
@@ -1514,14 +1556,14 @@ static void d68040_cpush(void)
 static void d68000_dbra(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "dbra    D%d, %x", g_cpu_ir & 7, temp_pc + make_int_16(read_imm_16()));
+	sprintf(g_dasm_str, "dbra    D%d, $%x", g_cpu_ir & 7, temp_pc + make_int_16(read_imm_16()));
 	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
 static void d68000_dbcc(void)
 {
 	uint temp_pc = g_cpu_pc;
-	sprintf(g_dasm_str, "db%-2s    D%d, %x", g_cc[(g_cpu_ir>>8)&0xf], g_cpu_ir & 7, temp_pc + make_int_16(read_imm_16()));
+	sprintf(g_dasm_str, "db%-2s    D%d, $%x", g_cc[(g_cpu_ir>>8)&0xf], g_cpu_ir & 7, temp_pc + make_int_16(read_imm_16()));
 	SET_OPCODE_FLAGS(DASMFLAG_STEP_OVER);
 }
 
@@ -1621,6 +1663,124 @@ static void d68020_extb_32(void)
 {
 	LIMIT_CPU_TYPES(M68020_PLUS);
 	sprintf(g_dasm_str, "extb.l  D%d; (2+)", g_cpu_ir&7);
+}
+
+static void d68040_fpu(void)
+{
+	char float_data_format[8][3] =
+	{
+		".l", ".s", ".x", ".p", ".w", ".d", ".b", ".?"
+	};
+
+	char mnemonic[40];
+	uint w2, src, dst_reg;
+	LIMIT_CPU_TYPES(M68040_PLUS);
+	w2 = read_imm_16();
+
+	src = (w2 >> 10) & 0x7;
+	dst_reg = (w2 >> 7) & 0x7;
+
+	switch ((w2 >> 13) & 0x7)
+	{
+		case 0x0:
+		case 0x2:
+		{
+			switch(w2 & 0x7f)
+			{
+				case 0x00:	sprintf(mnemonic, "fmove"); break;
+				case 0x01:	sprintf(mnemonic, "fint"); break;
+				case 0x02:	sprintf(mnemonic, "fsinh"); break;
+				case 0x03:	sprintf(mnemonic, "fintrz"); break;
+				case 0x04:	sprintf(mnemonic, "fsqrt"); break;
+				case 0x06:	sprintf(mnemonic, "flognp1"); break;
+				case 0x08:	sprintf(mnemonic, "fetoxm1"); break;
+				case 0x09:	sprintf(mnemonic, "ftanh1"); break;
+				case 0x0a:	sprintf(mnemonic, "fatan"); break;
+				case 0x0c:	sprintf(mnemonic, "fasin"); break;
+				case 0x0d:	sprintf(mnemonic, "fatanh"); break;
+				case 0x0e:	sprintf(mnemonic, "fsin"); break;
+				case 0x0f:	sprintf(mnemonic, "ftan"); break;
+				case 0x10:	sprintf(mnemonic, "fetox"); break;
+				case 0x11:	sprintf(mnemonic, "ftwotox"); break;
+				case 0x12:	sprintf(mnemonic, "ftentox"); break;
+				case 0x14:	sprintf(mnemonic, "flogn"); break;
+				case 0x15:	sprintf(mnemonic, "flog10"); break;
+				case 0x16:	sprintf(mnemonic, "flog2"); break;
+				case 0x18:	sprintf(mnemonic, "fabs"); break;
+				case 0x19:	sprintf(mnemonic, "fcosh"); break;
+				case 0x1a:	sprintf(mnemonic, "fneg"); break;
+				case 0x1c:	sprintf(mnemonic, "facos"); break;
+				case 0x1d:	sprintf(mnemonic, "fcos"); break;
+				case 0x1e:	sprintf(mnemonic, "fgetexp"); break;
+				case 0x1f:	sprintf(mnemonic, "fgetman"); break;
+				case 0x20:	sprintf(mnemonic, "fdiv"); break;
+				case 0x21:	sprintf(mnemonic, "fmod"); break;
+				case 0x22:	sprintf(mnemonic, "fadd"); break;
+				case 0x23:	sprintf(mnemonic, "fmul"); break;
+				case 0x24:	sprintf(mnemonic, "fsgldiv"); break;
+				case 0x25:	sprintf(mnemonic, "frem"); break;
+				case 0x26:	sprintf(mnemonic, "fscale"); break;
+				case 0x27:	sprintf(mnemonic, "fsglmul"); break;
+				case 0x28:	sprintf(mnemonic, "fsub"); break;
+				case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
+							sprintf(mnemonic, "fsincos"); break;
+				case 0x38:	sprintf(mnemonic, "fcmp"); break;
+				case 0x3a:	sprintf(mnemonic, "ftst"); break;
+				case 0x41:	sprintf(mnemonic, "fssqrt"); break;
+				case 0x45:	sprintf(mnemonic, "fdsqrt"); break;
+				case 0x58:	sprintf(mnemonic, "fsabs"); break;
+				case 0x5a:	sprintf(mnemonic, "fsneg"); break;
+				case 0x5c:	sprintf(mnemonic, "fdabs"); break;
+				case 0x5e:	sprintf(mnemonic, "fdneg"); break;
+				case 0x60:	sprintf(mnemonic, "fsdiv"); break;
+				case 0x62:	sprintf(mnemonic, "fsadd"); break;
+				case 0x63:	sprintf(mnemonic, "fsmul"); break;
+				case 0x64:	sprintf(mnemonic, "fddiv"); break;
+				case 0x66:	sprintf(mnemonic, "fdadd"); break;
+				case 0x67:	sprintf(mnemonic, "fdmul"); break;
+				case 0x68:	sprintf(mnemonic, "fssub"); break;
+				case 0x6c:	sprintf(mnemonic, "fdsub"); break;
+
+				default:	sprintf(mnemonic, "FPU (?)"); break;
+			}
+
+			if (w2 & 0x4000)
+			{
+				sprintf(g_dasm_str, "%s%s   %s, FP%d", mnemonic, float_data_format[src], get_ea_mode_str_32(g_cpu_ir), dst_reg);
+			}
+			else
+			{
+				sprintf(g_dasm_str, "%s.x   FP%d, FP%d", mnemonic, src, dst_reg);
+			}
+			break;
+		}
+
+		case 0x3:
+		{
+			sprintf(g_dasm_str, "fmove /todo");
+			break;
+		}
+
+		case 0x4:
+		case 0x5:
+		{
+			sprintf(g_dasm_str, "fmove /todo");
+			break;
+		}
+
+		case 0x6:
+		case 0x7:
+		{
+			sprintf(g_dasm_str, "fmovem /todo");
+			break;
+		}
+
+		default:
+		{
+			sprintf(g_dasm_str, "FPU (?) ");
+			break;
+		}
+	}
 }
 
 static void d68000_jmp(void)
@@ -3008,6 +3168,7 @@ static opcode_struct g_opcode_info[] =
 	{d68020_extb_32      , 0xfff8, 0x49c0, 0x000},
 	{d68000_ext_16       , 0xfff8, 0x4880, 0x000},
 	{d68000_ext_32       , 0xfff8, 0x48c0, 0x000},
+	{d68040_fpu          , 0xffc0, 0xf200, 0x000},
 	{d68000_illegal      , 0xffff, 0x4afc, 0x000},
 	{d68000_jmp          , 0xffc0, 0x4ec0, 0x27b},
 	{d68000_jsr          , 0xffc0, 0x4e80, 0x27b},
@@ -3336,6 +3497,18 @@ char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type)
 	return buff;
 }
 
+unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, unsigned char* opdata, unsigned char* argdata, int length, unsigned int cpu_type)
+{
+	unsigned int result;
+
+	g_rawop = opdata;
+	g_rawbasepc = pc;
+	g_rawlength = length;
+	result = m68k_disassemble(str_buff, pc, cpu_type);
+	g_rawop = NULL;
+	return result;
+}
+
 /* Check if the instruction is a valid one */
 unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cpu_type)
 {
@@ -3505,6 +3678,27 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
 			if(g_instruction_table[instruction] == d68040_move16_al_ai)
 				return 0;
 			if(g_instruction_table[instruction] == d68040_pflush)
+				return 0;
+		case M68K_CPU_TYPE_68040:
+			if(g_instruction_table[instruction] == d68020_cpbcc_16)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cpbcc_32)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cpdbcc)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cpgen)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cprestore)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cpsave)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cpscc)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cptrapcc_0)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cptrapcc_16)
+				return 0;
+			if(g_instruction_table[instruction] == d68020_cptrapcc_32)
 				return 0;
 	}
 	if(cpu_type != M68K_CPU_TYPE_68020 && cpu_type != M68K_CPU_TYPE_68EC020 &&

@@ -321,7 +321,7 @@ unsigned int m68k_get_context(void* dst);
 void m68k_set_context(void* dst);
 
 /* Register the CPU state information */
-void m68k_state_register(const char *type);
+void m68k_state_register(const char *type, int index);
 
 
 /* Peek at the internals of a CPU context.  This can either be a context
@@ -340,6 +340,11 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
  * disassembly in str_buff and returns the size of the instruction in bytes.
  */
 unsigned int m68k_disassemble(char* str_buff, unsigned int pc, unsigned int cpu_type);
+
+/* Same as above but accepts raw opcode data directly rather than fetching
+ * via the read/write interfaces.
+ */
+unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, unsigned char* opdata, unsigned char* argdata, int length, unsigned int cpu_type);
 
 
 /* ======================================================================== */
