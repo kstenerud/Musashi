@@ -2392,6 +2392,20 @@ static void d68000_pea(void)
 	sprintf(g_dasm_str, "pea     %s", get_ea_mode_str_32(g_cpu_ir));
 }
 
+static void d68040_pflush(void)
+{
+	LIMIT_CPU_TYPES(M68040_PLUS);
+
+	if (g_cpu_ir & 0x10)
+	{
+		sprintf(g_dasm_str, "pflusha%s", (g_cpu_ir & 8) ? "" : "n");
+	}
+	else
+	{
+		sprintf(g_dasm_str, "pflush%s(A%d)", (g_cpu_ir & 8) ? "" : "n", g_cpu_ir & 7);
+	}
+}
+
 static void d68000_reset(void)
 {
 	sprintf(g_dasm_str, "reset");
@@ -3073,6 +3087,7 @@ static opcode_struct g_opcode_info[] =
 	{d68020_pack_rr      , 0xf1f8, 0x8140, 0x000},
 	{d68020_pack_mm      , 0xf1f8, 0x8148, 0x000},
 	{d68000_pea          , 0xffc0, 0x4840, 0x27b},
+	{d68040_pflush       , 0xffe0, 0xf500, 0x000},
 	{d68000_reset        , 0xffff, 0x4e70, 0x000},
 	{d68000_ror_s_8      , 0xf1f8, 0xe018, 0x000},
 	{d68000_ror_s_16     , 0xf1f8, 0xe058, 0x000},
@@ -3488,6 +3503,8 @@ unsigned int m68k_is_valid_instruction(unsigned int instruction, unsigned int cp
 			if(g_instruction_table[instruction] == d68040_move16_ai_al)
 				return 0;
 			if(g_instruction_table[instruction] == d68040_move16_al_ai)
+				return 0;
+			if(g_instruction_table[instruction] == d68040_pflush)
 				return 0;
 	}
 	if(cpu_type != M68K_CPU_TYPE_68020 && cpu_type != M68K_CPU_TYPE_68EC020 &&

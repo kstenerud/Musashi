@@ -77,7 +77,6 @@ char* g_version = "3.3";
 #define M68K_MAX_PATH 1024
 #define M68K_MAX_DIR  1024
 
-#define NUM_CPUS                          3	/* 000, 010, 020 */
 #define MAX_LINE_LENGTH                 200	/* length of 1 line */
 #define MAX_BODY_LENGTH                 300	/* Number of lines in 1 function */
 #define MAX_REPLACE_LENGTH               30	/* Max number of replace strings */
@@ -138,6 +137,8 @@ char* g_version = "3.3";
 #define CPU_TYPE_000 0
 #define CPU_TYPE_010 1
 #define CPU_TYPE_020 2
+#define CPU_TYPE_040 3
+#define NUM_CPUS                          4	/* 000, 010, 020, 040 */
 
 #define UNSPECIFIED "."
 #define UNSPECIFIED_CH '.'
@@ -320,21 +321,22 @@ int g_size_select_table[33] =
 };
 
 /* Extra cycles required for certain EA modes */
+/* TODO: correct timings for 040 */
 int g_ea_cycle_table[13][NUM_CPUS][3] =
-{/*       000           010           020   */
-	{{ 0,  0,  0}, { 0,  0,  0}, { 0,  0,  0}}, /* EA_MODE_NONE */
-	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}}, /* EA_MODE_AI   */
-	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}}, /* EA_MODE_PI   */
-	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}}, /* EA_MODE_PI7  */
-	{{ 0,  6, 10}, { 0,  6, 10}, { 0,  5,  5}}, /* EA_MODE_PD   */
-	{{ 0,  6, 10}, { 0,  6, 10}, { 0,  5,  5}}, /* EA_MODE_PD7  */
-	{{ 0,  8, 12}, { 0,  8, 12}, { 0,  5,  5}}, /* EA_MODE_DI   */
-	{{ 0, 10, 14}, { 0, 10, 14}, { 0,  7,  7}}, /* EA_MODE_IX   */
-	{{ 0,  8, 12}, { 0,  8, 12}, { 0,  4,  4}}, /* EA_MODE_AW   */
-	{{ 0, 12, 16}, { 0, 12, 16}, { 0,  4,  4}}, /* EA_MODE_AL   */
-	{{ 0,  8, 12}, { 0,  8, 12}, { 0,  5,  5}}, /* EA_MODE_PCDI */
-	{{ 0, 10, 14}, { 0, 10, 14}, { 0,  7,  7}}, /* EA_MODE_PCIX */
-	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  2,  4}}, /* EA_MODE_I    */
+{/*       000           010           020           040  */
+	{{ 0,  0,  0}, { 0,  0,  0}, { 0,  0,  0}, { 0,  0,  0}}, /* EA_MODE_NONE */
+	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}, { 0,  4,  4}}, /* EA_MODE_AI   */
+	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}, { 0,  4,  4}}, /* EA_MODE_PI   */
+	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}, { 0,  4,  4}}, /* EA_MODE_PI7  */
+	{{ 0,  6, 10}, { 0,  6, 10}, { 0,  5,  5}, { 0,  5,  5}}, /* EA_MODE_PD   */
+	{{ 0,  6, 10}, { 0,  6, 10}, { 0,  5,  5}, { 0,  5,  5}}, /* EA_MODE_PD7  */
+	{{ 0,  8, 12}, { 0,  8, 12}, { 0,  5,  5}, { 0,  5,  5}}, /* EA_MODE_DI   */
+	{{ 0, 10, 14}, { 0, 10, 14}, { 0,  7,  7}, { 0,  7,  7}}, /* EA_MODE_IX   */
+	{{ 0,  8, 12}, { 0,  8, 12}, { 0,  4,  4}, { 0,  4,  4}}, /* EA_MODE_AW   */
+	{{ 0, 12, 16}, { 0, 12, 16}, { 0,  4,  4}, { 0,  4,  4}}, /* EA_MODE_AL   */
+	{{ 0,  8, 12}, { 0,  8, 12}, { 0,  5,  5}, { 0,  5,  5}}, /* EA_MODE_PCDI */
+	{{ 0, 10, 14}, { 0, 10, 14}, { 0,  7,  7}, { 0,  7,  7}}, /* EA_MODE_PCIX */
+	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  2,  4}, { 0,  2,  4}}, /* EA_MODE_I    */
 };
 
 /* Extra cycles for JMP instruction (000, 010) */

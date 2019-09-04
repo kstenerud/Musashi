@@ -162,9 +162,11 @@
 
 /* CPU types for deciding what to emulate */
 #define CPU_TYPE_000   1
-#define CPU_TYPE_010   2
-#define CPU_TYPE_EC020 4
-#define CPU_TYPE_020   8
+#define CPU_TYPE_008   2
+#define CPU_TYPE_010   4
+#define CPU_TYPE_EC020 8
+#define CPU_TYPE_020   16
+#define CPU_TYPE_040   32
 
 /* Different ways to stop the CPU */
 #define STOP_LEVEL_STOP 1
@@ -369,8 +371,16 @@
 /* These defines are dependant on the configuration defines in m68kconf.h */
 
 /* Disable certain comparisons if we're not using all CPU types */
+#if M68K_EMULATE_040
+	#define CPU_TYPE_IS_040_PLUS(A)    ((A) & CPU_TYPE_040)
+	#define CPU_TYPE_IS_040_LESS(A)    1
+#else
+	#define CPU_TYPE_IS_040_PLUS(A)    0
+	#define CPU_TYPE_IS_040_LESS(A)    1
+#endif
+
 #if M68K_EMULATE_020
-	#define CPU_TYPE_IS_020_PLUS(A)    ((A) & CPU_TYPE_020)
+	#define CPU_TYPE_IS_020_PLUS(A)    ((A) & (CPU_TYPE_020 | CPU_TYPE_040))
 	#define CPU_TYPE_IS_020_LESS(A)    1
 #else
 	#define CPU_TYPE_IS_020_PLUS(A)    0
@@ -378,7 +388,7 @@
 #endif
 
 #if M68K_EMULATE_EC020
-	#define CPU_TYPE_IS_EC020_PLUS(A)  ((A) & (CPU_TYPE_EC020 | CPU_TYPE_020))
+	#define CPU_TYPE_IS_EC020_PLUS(A)  ((A) & (CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_040))
 	#define CPU_TYPE_IS_EC020_LESS(A)  ((A) & (CPU_TYPE_000 | CPU_TYPE_010 | CPU_TYPE_EC020))
 #else
 	#define CPU_TYPE_IS_EC020_PLUS(A)  CPU_TYPE_IS_020_PLUS(A)
@@ -387,7 +397,7 @@
 
 #if M68K_EMULATE_010
 	#define CPU_TYPE_IS_010(A)         ((A) == CPU_TYPE_010)
-	#define CPU_TYPE_IS_010_PLUS(A)    ((A) & (CPU_TYPE_010 | CPU_TYPE_EC020 | CPU_TYPE_020))
+	#define CPU_TYPE_IS_010_PLUS(A)    ((A) & (CPU_TYPE_010 | CPU_TYPE_EC020 | CPU_TYPE_020 | CPU_TYPE_040))
 	#define CPU_TYPE_IS_010_LESS(A)    ((A) & (CPU_TYPE_000 | CPU_TYPE_010))
 #else
 	#define CPU_TYPE_IS_010(A)         0
@@ -401,7 +411,7 @@
 	#define CPU_TYPE_IS_020_VARIANT(A) 0
 #endif
 
-#if M68K_EMULATE_020 || M68K_EMULATE_EC020 || M68K_EMULATE_010
+#if M68K_EMULATE_040 || M68K_EMULATE_020 || M68K_EMULATE_EC020 || M68K_EMULATE_010
 	#define CPU_TYPE_IS_000(A)         ((A) == CPU_TYPE_000)
 #else
 	#define CPU_TYPE_IS_000(A)         1
@@ -1888,11 +1898,11 @@ m68k_read_memory_8(0x00ffff01);
 
 	m68ki_jump_vector(EXCEPTION_ADDRESS_ERROR);
 
-	/* Use up some clock cycles. Note that we don't need to undo the 
+	/* Use up some clock cycles. Note that we don't need to undo the
 	instruction's cycles here as we've longjmp:ed directly from the
 	instruction handler without passing the part of the excecute loop
 	that deducts instruction cycles */
-	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_ADDRESS_ERROR]); 
+	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_ADDRESS_ERROR]);
 }
 
 
