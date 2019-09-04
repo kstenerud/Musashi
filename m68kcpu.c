@@ -955,8 +955,6 @@ void m68k_set_context(void* src)
 
 #if M68K_COMPILE_FOR_MAME == OPT_ON
 
-#include "state.h"
-
 static struct {
 	UINT16 sr;
 	UINT8 stopped;

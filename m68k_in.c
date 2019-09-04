@@ -1256,8 +1256,8 @@ M68KMAKE_OP(adda, 16, ., a)
 
 M68KMAKE_OP(adda, 16, ., .)
 {
-	signed short src = MAKE_INT_16(M68KMAKE_GET_OPER_AY_16);
 	uint* r_dst = &AX;
+	uint src = MAKE_INT_16(M68KMAKE_GET_OPER_AY_16);
 
 	*r_dst = MASK_OUT_ABOVE_32(*r_dst + src);
 }
@@ -6936,7 +6936,15 @@ M68KMAKE_OP(movec, 32, rc, .)
 			case 0x002:			   /* CACR */
 				if(CPU_TYPE_IS_EC020_PLUS(CPU_TYPE))
 				{
+					if (CPU_TYPE_IS_040_PLUS(CPU_TYPE))
+					{
 					REG_CACR = REG_DA[(word2 >> 12) & 15];
+					}
+					else
+					{
+						/* non 68040 can only set the lower 4 bits (C,CE,F,E) */
+						REG_CACR = REG_DA[(word2 >> 12) & 15] & 0x0f;
+					}
 					return;
 				}
 				m68ki_exception_illegal();
@@ -9666,8 +9674,8 @@ M68KMAKE_OP(suba, 16, ., a)
 
 M68KMAKE_OP(suba, 16, ., .)
 {
-	signed short src = MAKE_INT_16(M68KMAKE_GET_OPER_AY_16);
 	uint* r_dst = &AX;
+	uint src = MAKE_INT_16(M68KMAKE_GET_OPER_AY_16);
 
 	*r_dst = MASK_OUT_ABOVE_32(*r_dst - src);
 }

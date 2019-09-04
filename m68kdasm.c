@@ -2017,7 +2017,7 @@ static void d68010_movec(void)
 			processor = "?";
 	}
 
-	if(BIT_1(g_cpu_ir))
+	if(BIT_0(g_cpu_ir))
 		sprintf(g_dasm_str, "movec %c%d, %s; (%s)", BIT_F(extension) ? 'A' : 'D', (extension>>12)&7, reg_name, processor);
 	else
 		sprintf(g_dasm_str, "movec %s, %c%d; (%s)", reg_name, BIT_F(extension) ? 'A' : 'D', (extension>>12)&7, processor);

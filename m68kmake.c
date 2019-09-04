@@ -92,7 +92,6 @@ char* g_version = "3.3";
 #define FILENAME_INPUT      "m68k_in.c"
 #define FILENAME_PROTOTYPE  "m68kops.h"
 #define FILENAME_TABLE      "m68kops.c"
-#define FILENAME_OPS        "m68kopac.c"
 
 
 /* Identifier sequences recognized by this program */
