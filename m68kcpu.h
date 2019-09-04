@@ -3,10 +3,10 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.31
+ *                                Version 3.32
  *
  * A portable Motorola M680x0 processor emulation engine.
- * Copyright 1998-2007 Karl Stenerud.  All rights reserved.
+ * Copyright Karl Stenerud.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -501,9 +501,9 @@
 
 #if M68K_INSTRUCTION_HOOK
 	#if M68K_INSTRUCTION_HOOK == OPT_SPECIFY_HANDLER
-		#define m68ki_instr_hook() M68K_INSTRUCTION_CALLBACK()
+		#define m68ki_instr_hook(pc) M68K_INSTRUCTION_CALLBACK(pc)
 	#else
-		#define m68ki_instr_hook() CALLBACK_INSTR_HOOK()
+		#define m68ki_instr_hook(pc) CALLBACK_INSTR_HOOK(pc)
 	#endif
 #else
 	#define m68ki_instr_hook()
@@ -605,7 +605,7 @@
 #if M68K_LOG_ENABLE
 	#include <stdio.h>
 	extern FILE* M68K_LOG_FILEHANDLE
-	extern char* m68ki_cpu_names[];
+	extern const char *const m68ki_cpu_names[];
 
 	#define M68K_DO_LOG(A) if(M68K_LOG_FILEHANDLE) fprintf A
 	#if M68K_LOG_1010_1111
@@ -907,8 +907,8 @@ typedef struct
 	uint cyc_movem_l;
 	uint cyc_shift;
 	uint cyc_reset;
-	uint8* cyc_instruction;
-	uint8* cyc_exception;
+	const uint8* cyc_instruction;
+	const uint8* cyc_exception;
 
 	/* Callbacks to host */
 	int  (*int_ack_callback)(int int_line);           /* Interrupt Acknowledge */
@@ -919,7 +919,7 @@ typedef struct
 	int  (*tas_instr_callback)(void);                 /* Called when a TAS instruction is encountered, allows / disallows writeback */
 	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
 	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
-	void (*instr_hook_callback)(void);                /* Called every instruction cycle prior to execution */
+	void (*instr_hook_callback)(unsigned int pc);     /* Called every instruction cycle prior to execution */
 
 } m68ki_cpu_core;
 
@@ -927,12 +927,12 @@ typedef struct
 extern m68ki_cpu_core m68ki_cpu;
 extern sint           m68ki_remaining_cycles;
 extern uint           m68ki_tracing;
-extern uint8          m68ki_shift_8_table[];
-extern uint16         m68ki_shift_16_table[];
-extern uint           m68ki_shift_32_table[];
-extern uint8          m68ki_exception_cycle_table[][256];
+extern const uint8    m68ki_shift_8_table[];
+extern const uint16   m68ki_shift_16_table[];
+extern const uint     m68ki_shift_32_table[];
+extern const uint8    m68ki_exception_cycle_table[][256];
 extern uint           m68ki_address_space;
-extern uint8          m68ki_ea_idx_cycle_table[];
+extern const uint8    m68ki_ea_idx_cycle_table[];
 
 extern uint           m68ki_aerr_address;
 extern uint           m68ki_aerr_write_mode;
