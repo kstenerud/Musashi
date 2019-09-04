@@ -3,10 +3,10 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.4
+ *                                Version 3.31
  *
  * A portable Motorola M680x0 processor emulation engine.
- * Copyright 1998-2001 Karl Stenerud.  All rights reserved.
+ * Copyright 1998-2007 Karl Stenerud.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,7 +56,7 @@
  */
 
 
-char* g_version = "3.3";
+static const char* g_version = "3.31";
 
 /* ======================================================================== */
 /* =============================== INCLUDES =============================== */
@@ -1221,8 +1221,8 @@ int main(int argc, char **argv)
 	int table_body_read = 0;
 	int ophandler_body_read = 0;
 
-	printf("\n\t\tMusashi v%s 68000, 68010, 68EC020, 68020 emulator\n", g_version);
-	printf("\t\tCopyright 1998-2000 Karl Stenerud (karl@mame.net)\n\n");
+	printf("\n\tMusashi v%s 68000, 68008, 68010, 68EC020, 68020, 68040 emulator\n", g_version);
+	printf("\t\tCopyright 1998-2007 Karl Stenerud (karl@mame.net)\n\n");
 
 	/* Check if output path and source for the input file are given */
     if(argc > 1)

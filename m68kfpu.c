@@ -119,6 +119,8 @@ static uint8 READ_EA_8(int ea)
 		}
 		default:	fatalerror("MC68040: READ_EA_8: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
+
+	return 0;
 }
 
 static uint16 READ_EA_16(int ea)
@@ -169,6 +171,8 @@ static uint16 READ_EA_16(int ea)
 		}
 		default:	fatalerror("MC68040: READ_EA_16: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
+
+	return 0;
 }
 
 static uint32 READ_EA_32(int ea)
@@ -228,6 +232,7 @@ static uint32 READ_EA_32(int ea)
 		}
 		default:	fatalerror("MC68040: READ_EA_32: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
+	return 0;
 }
 
 static void WRITE_EA_32(int ea, uint32 data)
@@ -351,6 +356,8 @@ static uint64 READ_EA_64(int ea)
 		}
 		default:	fatalerror("MC68040: READ_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
+
+	return 0;
 }
 
 static void WRITE_EA_64(int ea, uint64 data)
@@ -387,7 +394,7 @@ static void WRITE_EA_64(int ea, uint64 data)
 	}
 }
 
-fp_reg READ_EA_FPE(int ea)
+static fp_reg READ_EA_FPE(int ea)
 {
 	fp_reg r;
 	int mode = (ea >> 3) & 0x7;
@@ -414,7 +421,7 @@ fp_reg READ_EA_FPE(int ea)
 	return r;
 }
 
-void WRITE_EA_FPE(int ea, fp_reg fpr)
+static void WRITE_EA_FPE(int ea, fp_reg fpr)
 {
 	int mode = (ea >> 3) & 0x7;
 	int reg = (ea & 0x7);
