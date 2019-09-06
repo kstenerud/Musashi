@@ -124,7 +124,7 @@
  * instruction.
  */
 #define M68K_INSTRUCTION_HOOK       OPT_SPECIFY_HANDLER
-#define M68K_INSTRUCTION_CALLBACK() cpu_instr_callback()
+#define M68K_INSTRUCTION_CALLBACK(pc) cpu_instr_callback(pc)
 
 
 /* If ON, the CPU will emulate the 4-byte prefetch queue of a real 68000 */
@@ -157,7 +157,7 @@
 /* If ON, the enulation core will use 64-bit integers to speed up some
  * operations.
 */
-#define M68K_USE_64_BIT  OPT_OFF
+#define M68K_USE_64_BIT  OPT_ON
 
 
 /* Set to your compiler's static inline keyword to enable it, or

@@ -3,10 +3,10 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.4
+ *                                Version 3.32
  *
  * A portable Motorola M680x0 processor emulation engine.
- * Copyright 1998-2001 Karl Stenerud.  All rights reserved.
+ * Copyright Karl Stenerud.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,7 +52,7 @@
  * to OPT_ON and use m68kmame.h to configure the 68k core.
  */
 #ifndef M68K_COMPILE_FOR_MAME
-#define M68K_COMPILE_FOR_MAME      OPT_ON
+#define M68K_COMPILE_FOR_MAME      OPT_OFF
 #endif /* M68K_COMPILE_FOR_MAME */
 
 
@@ -67,6 +67,7 @@
 #define M68K_EMULATE_010            OPT_ON
 #define M68K_EMULATE_EC020          OPT_ON
 #define M68K_EMULATE_020            OPT_ON
+#define M68K_EMULATE_040            OPT_ON
 
 
 /* If ON, the CPU will call m68k_read_immediate_xx() for immediate addressing
@@ -109,6 +110,24 @@
 #define M68K_EMULATE_RESET          OPT_OFF
 #define M68K_RESET_CALLBACK()       your_reset_handler_function()
 
+/* If ON, CPU will call the callback when it encounters a cmpi.l #v, dn
+ * instruction.
+ */
+#define M68K_CMPILD_HAS_CALLBACK     OPT_OFF
+#define M68K_CMPILD_CALLBACK(v,r)    your_cmpild_handler_function(v,r)
+
+
+/* If ON, CPU will call the callback when it encounters a rte
+ * instruction.
+ */
+#define M68K_RTE_HAS_CALLBACK       OPT_OFF
+#define M68K_RTE_CALLBACK()         your_rte_handler_function()
+
+/* If ON, CPU will call the callback when it encounters a tas
+ * instruction.
+ */
+#define M68K_TAS_HAS_CALLBACK       OPT_OFF
+#define M68K_TAS_CALLBACK()         your_tas_handler_function()
 
 /* If ON, CPU will call the set fc callback on every memory access to
  * differentiate between user/supervisor, program/data access like a real
@@ -118,7 +137,6 @@
  */
 #define M68K_EMULATE_FC             OPT_OFF
 #define M68K_SET_FC_CALLBACK(A)     your_set_fc_handler_function(A)
-
 
 /* If ON, CPU will call the pc changed callback when it changes the PC by a
  * large value.  This allows host programs to be nicer when it comes to
@@ -132,7 +150,7 @@
  * instruction.
  */
 #define M68K_INSTRUCTION_HOOK       OPT_OFF
-#define M68K_INSTRUCTION_CALLBACK() your_instruction_hook_function()
+#define M68K_INSTRUCTION_CALLBACK(pc) your_instruction_hook_function(pc)
 
 
 /* If ON, the CPU will emulate the 4-byte prefetch queue of a real 68000 */
@@ -165,7 +183,7 @@
 /* If ON, the enulation core will use 64-bit integers to speed up some
  * operations.
 */
-#define M68K_USE_64_BIT  OPT_OFF
+#define M68K_USE_64_BIT  OPT_ON
 
 
 /* Set to your compiler's static inline keyword to enable it, or
