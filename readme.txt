@@ -11,8 +11,9 @@
 INTRODUCTION:
 ------------
 
-Musashi is a Motorola 68000, 68010, 68EC020, and 68020 emulator written in C.
-This emulator was written with two goals in mind: portability and speed.
+Musashi is a Motorola 68000, 68010, 68EC020, 68020 and 68040 emulator written
+in C.  This emulator was written with two goals in mind: portability and
+speed.
 
 The emulator is written to ANSI C89 specifications.  It also uses inline
 functions, which are C9X compliant.
@@ -302,4 +303,15 @@ of the CPU.
 EXAMPLE:
 -------
 
-The subdir example contains a full example (currently DOS only).
+The subdir example contains a full example (currently linux & Dos only).
+
+Compilation
+-----------
+
+You can use the default Makefile in Musashi's directory, it works like this :
+1st build m68kmake, which will build m68kops.c and m68kops.h based on the
+contents of m68k_in.c.
+Then compile m68kcpu.o and m68kops.o. Add m68kdasm.o if you want the
+disassemble functions. When linking this to your project you will need libm
+for the fpu emulation of the 68040.
+
