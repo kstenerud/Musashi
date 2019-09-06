@@ -367,6 +367,7 @@
 #define CALLBACK_CMPILD_INSTR m68ki_cpu.cmpild_instr_callback
 #define CALLBACK_RTE_INSTR    m68ki_cpu.rte_instr_callback
 #define CALLBACK_TAS_INSTR    m68ki_cpu.tas_instr_callback
+#define CALLBACK_ILLG_INSTR    m68ki_cpu.illg_instr_callback
 #define CALLBACK_PC_CHANGED  m68ki_cpu.pc_changed_callback
 #define CALLBACK_SET_FC      m68ki_cpu.set_fc_callback
 #define CALLBACK_INSTR_HOOK  m68ki_cpu.instr_hook_callback
@@ -497,6 +498,15 @@
 	#define m68ki_tas_callback() 1
 #endif /* M68K_TAS_HAS_CALLBACK */
 
+#if M68K_ILLG_HAS_CALLBACK
+	#if M68K_ILLG_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+		#define m68ki_illg_callback(opcode) M68K_ILLG_CALLBACK(opcode)
+	#else
+		#define m68ki_illg_callback(opcode) CALLBACK_ILLG_INSTR(opcode)
+	#endif
+#else
+	#define m68ki_illg_callback(opcode) 0 // Default is 0 = not handled, exception will occur
+#endif /* M68K_ILLG_HAS_CALLBACK */
 
 #if M68K_INSTRUCTION_HOOK
 	#if M68K_INSTRUCTION_HOOK == OPT_SPECIFY_HANDLER
@@ -919,6 +929,7 @@ typedef struct
  	void (*cmpild_instr_callback)(unsigned int, int); /* Called when a CMPI.L #v, Dn instruction is encountered */
  	void (*rte_instr_callback)(void);                 /* Called when a RTE instruction is encountered */
 	int  (*tas_instr_callback)(void);                 /* Called when a TAS instruction is encountered, allows / disallows writeback */
+	int  (*illg_instr_callback)(int);                 /* Called when an illegal instruction is encountered, allows handling */
 	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
 	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
 	void (*instr_hook_callback)(unsigned int pc);     /* Called every instruction cycle prior to execution */
@@ -1908,6 +1919,10 @@ INLINE void m68ki_exception_1111(void)
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_1111] - CYC_INSTRUCTION[REG_IR]);
 }
 
+#if M68K_ILLG_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+extern int m68ki_illg_callback(int);
+#endif
+
 /* Exception for illegal instructions */
 INLINE void m68ki_exception_illegal(void)
 {
@@ -1916,6 +1931,8 @@ INLINE void m68ki_exception_illegal(void)
 	M68K_DO_LOG((M68K_LOG_FILEHANDLE "%s at %08x: illegal instruction %04x (%s)\n",
 				 m68ki_cpu_names[CPU_TYPE], ADDRESS_68K(REG_PPC), REG_IR,
 				 m68ki_disassemble_quick(ADDRESS_68K(REG_PPC))));
+	if (m68ki_illg_callback(REG_IR))
+	    return;
 
 	sr = m68ki_init_exception();
 

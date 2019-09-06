@@ -256,7 +256,13 @@ void m68k_set_pc_changed_callback(void  (*callback)(unsigned int new_pc));
  */
 void m68k_set_tas_instr_callback(int  (*callback)(void));
 
-
+/* Set the callback for illegal instructions.
+ * You must enable M68K_ILLG_HAS_CALLBACK in m68kconf.h.
+ * The CPU calls this callback every time it encounters an illegal instruction
+ * which must return 1 if it handles the instruction normally or 0 if it's really an illegal instruction.
+ * Default behavior: return 0, exception will occur.
+ */
+void m68k_set_illg_instr_callback(int  (*callback)(int));
 
 /* Set the callback for CPU function code changes.
  * You must enable M68K_EMULATE_FC in m68kconf.h.
