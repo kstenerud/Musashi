@@ -486,6 +486,12 @@ static int default_tas_instr_callback(void)
 	return 1; // allow writeback
 }
 
+/* Called when an illegal instruction is encountered */
+static int default_illg_instr_callback(int opcode)
+{
+	return 0; // not handled : exception will occur
+}
+
 /* Called when the program counter changed by a large value */
 static unsigned int default_pc_changed_callback_data;
 static void default_pc_changed_callback(unsigned int new_pc)
@@ -657,6 +663,11 @@ void m68k_set_rte_instr_callback(void  (*callback)(void))
 void m68k_set_tas_instr_callback(int  (*callback)(void))
 {
 	CALLBACK_TAS_INSTR = callback ? callback : default_tas_instr_callback;
+}
+
+void m68k_set_illg_instr_callback(int  (*callback)(int))
+{
+	CALLBACK_ILLG_INSTR = callback ? callback : default_illg_instr_callback;
 }
 
 void m68k_set_pc_changed_callback(void  (*callback)(unsigned int new_pc))
@@ -893,6 +904,7 @@ void m68k_init(void)
 	m68k_set_cmpild_instr_callback(NULL);
 	m68k_set_rte_instr_callback(NULL);
 	m68k_set_tas_instr_callback(NULL);
+	m68k_set_illg_instr_callback(NULL);
 	m68k_set_pc_changed_callback(NULL);
 	m68k_set_fc_callback(NULL);
 	m68k_set_instr_hook_callback(NULL);

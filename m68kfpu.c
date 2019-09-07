@@ -406,12 +406,12 @@ static fp_reg READ_EA_FPE(int ea)
 	{
 		case 3:		// (An)+
 		{
-			uint32 d1,d2,d3;
+			uint32 d1,d2;
 			uint32 ea = REG_A[reg];
 			REG_A[reg] += 12;
 			d1 = m68ki_read_32(ea+0);
 			d2 = m68ki_read_32(ea+4);
-			d3 = m68ki_read_32(ea+8);
+			// d3 = m68ki_read_32(ea+8);
 			r.i = (uint64)(d1) << 32 | (uint64)(d2);
 			break;
 		}

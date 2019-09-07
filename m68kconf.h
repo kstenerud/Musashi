@@ -129,6 +129,17 @@
 #define M68K_TAS_HAS_CALLBACK       OPT_OFF
 #define M68K_TAS_CALLBACK()         your_tas_handler_function()
 
+/* If ON, CPU will call the callback when it encounters an illegal instruction
+ * passing the opcode as argument. If the callback returns 1, then it's considered
+ * as a normal instruction, and the illegal exception in canceled. If it returns 0,
+ * the exception occurs normally.
+ * The callback looks like int callback(int opcode)
+ * You should put OPT_SPECIFY_HANDLER here if you cant to use it, otherwise it will
+ * use a dummy default handler and you'll have to call m68k_set_illg_instr_callback explicitely
+ */
+#define M68K_ILLG_HAS_CALLBACK	    OPT_OFF
+#define M68K_ILLG_CALLBACK(opcode)  op_illg(opcode)
+
 /* If ON, CPU will call the set fc callback on every memory access to
  * differentiate between user/supervisor, program/data access like a real
  * 68000 would.  This should be enabled and the callback should be set if you
