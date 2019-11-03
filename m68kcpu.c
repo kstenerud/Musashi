@@ -46,7 +46,6 @@ extern void m68ki_build_opcode_table(void);
 
 #include "m68kops.h"
 #include "m68kcpu.h"
-#include "m68kfpu.c"
 
 /* ======================================================================== */
 /* ================================= DATA ================================= */
@@ -473,6 +472,8 @@ static void default_reset_instr_callback(void)
 /* Called when a cmpi.l #v, dn instruction is executed */
 static void default_cmpild_instr_callback(unsigned int val, int reg)
 {
+	(void)val;
+	(void)reg;
 }
 
 /* Called when a rte instruction is executed */
@@ -489,6 +490,7 @@ static int default_tas_instr_callback(void)
 /* Called when an illegal instruction is encountered */
 static int default_illg_instr_callback(int opcode)
 {
+	(void)opcode;
 	return 0; // not handled : exception will occur
 }
 
@@ -509,6 +511,7 @@ static void default_set_fc_callback(unsigned int new_fc)
 /* Called every instruction cycle prior to execution */
 static void default_instr_hook_callback(unsigned int pc)
 {
+	(void)pc;
 }
 
 

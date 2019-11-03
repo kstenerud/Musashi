@@ -21,7 +21,7 @@ static void fatalerror(char *format, ...) {
 #define DOUBLE_EXPONENT					(unsigned long long)(0x7ff0000000000000)
 #define DOUBLE_MANTISSA					(unsigned long long)(0x000fffffffffffff)
 
-INLINE void SET_CONDITION_CODES(fp_reg reg)
+static inline void SET_CONDITION_CODES(fp_reg reg)
 {
 	REG_FPSR &= ~(FPCC_N|FPCC_Z|FPCC_I|FPCC_NAN);
 
@@ -50,7 +50,7 @@ INLINE void SET_CONDITION_CODES(fp_reg reg)
 	}
 }
 
-INLINE int TEST_CONDITION(int condition)
+static inline int TEST_CONDITION(int condition)
 {
 	int n = (REG_FPSR & FPCC_N) != 0;
 	int z = (REG_FPSR & FPCC_Z) != 0;

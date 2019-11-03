@@ -359,6 +359,7 @@ unsigned int input_device_read(void)
 
 void input_device_write(unsigned int value)
 {
+	(void)value;
 }
 
 
@@ -493,6 +494,7 @@ void disassemble_program()
 
 void cpu_instr_callback(int pc)
 {
+	(void)pc;
 /* The following code would print out instructions as they are executed */
 /*
 	static char buff[100];

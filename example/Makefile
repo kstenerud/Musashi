@@ -1,11 +1,16 @@
-# Just a basic makefile to quickly test that everyting is working, it just
-# compiles the .o and the generator
+EXENAME          = sim
 
+OSD_DOS          = osd_dos.c
+
+OSDFILES         = osd_linux.c # $(OSD_DOS)
+MAINFILES        = sim.c
 MUSASHIFILES     = m68kcpu.c m68kdasm.c
 MUSASHIGENCFILES = m68kops.c
 MUSASHIGENHFILES = m68kops.h
 MUSASHIGENERATOR = m68kmake
 
+# EXE = .exe
+# EXEPATH = .\\
 EXE =
 EXEPATH = ./
 
@@ -17,15 +22,18 @@ WARNINGS  = -Wall -Wextra -pedantic
 CFLAGS    = $(WARNINGS)
 LFLAGS    = $(WARNINGS)
 
+TARGET = $(EXENAME)$(EXE)
+
 DELETEFILES = $(MUSASHIGENCFILES) $(MUSASHIGENHFILES) $(.OFILES) $(TARGET) $(MUSASHIGENERATOR)$(EXE)
 
 
-all: $(.OFILES)
+all: $(TARGET)
 
 clean:
 	rm -f $(DELETEFILES)
 
-m68kcpu.o: $(MUSASHIGENHFILES)
+$(TARGET): $(MUSASHIGENHFILES) $(.OFILES) makefile
+	$(CC) -o $@ $(.OFILES) $(LFLAGS) -lm
 
 $(MUSASHIGENCFILES) $(MUSASHIGENHFILES): $(MUSASHIGENERATOR)$(EXE)
 	$(EXEPATH)$(MUSASHIGENERATOR)$(EXE)
