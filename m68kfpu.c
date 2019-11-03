@@ -1,10 +1,11 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include "m68kcpu.h"
 
 extern void exit(int);
 
-static void fatalerror(char *format, ...) {
+static __attribute__((noreturn)) void fatalerror(char *format, ...) {
       va_list ap;
       va_start(ap,format);
       fprintf(stderr,format,ap);
