@@ -5,7 +5,16 @@
 
 extern void exit(int);
 
-static __attribute__((noreturn)) void fatalerror(char *format, ...) {
+#if defined(_MSC_VER)
+#  define NORETURN __declspec(noreturn)
+#elif defined(__clang__) || defined(__GNUC__)
+#  define NORETURN __attribute__((noreturn))
+#else
+#  define NORETURN
+#endif
+
+// TODO: Remove this and replace with a non-fatal signaling mechanism
+static NORETURN void fatalerror(char *format, ...) {
       va_list ap;
       va_start(ap,format);
       fprintf(stderr,format,ap);
