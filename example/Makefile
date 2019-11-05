@@ -4,7 +4,7 @@ OSD_DOS          = osd_dos.c
 
 OSDFILES         = osd_linux.c # $(OSD_DOS)
 MAINFILES        = sim.c
-MUSASHIFILES     = m68kcpu.c m68kdasm.c
+MUSASHIFILES     = m68kcpu.c m68kdasm.c m68kfpu.c
 MUSASHIGENCFILES = m68kops.c
 MUSASHIGENHFILES = m68kops.h
 MUSASHIGENERATOR = m68kmake
@@ -32,7 +32,7 @@ all: $(TARGET)
 clean:
 	rm -f $(DELETEFILES)
 
-$(TARGET): $(MUSASHIGENHFILES) $(.OFILES) makefile
+$(TARGET): $(MUSASHIGENHFILES) $(.OFILES) Makefile
 	$(CC) -o $@ $(.OFILES) $(LFLAGS) -lm
 
 $(MUSASHIGENCFILES) $(MUSASHIGENHFILES): $(MUSASHIGENERATOR)$(EXE)
