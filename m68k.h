@@ -48,8 +48,11 @@ extern "C" {
 /* ======================================================================== */
 
 /* Import the configuration for this build */
+#ifdef MUSASHI_CNF
+#include MUSASHI_CNF
+#else
 #include "m68kconf.h"
-
+#endif
 
 /* ======================================================================== */
 /* ============================ GENERAL DEFINES =========================== */
