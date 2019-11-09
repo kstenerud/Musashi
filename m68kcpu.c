@@ -911,6 +911,23 @@ void m68k_init(void)
 	m68k_set_pc_changed_callback(NULL);
 	m68k_set_fc_callback(NULL);
 	m68k_set_instr_hook_callback(NULL);
+	m68ki_cpu.read8 = m68k_read_memory_8;
+	m68ki_cpu.read16 = m68k_read_memory_16;
+	m68ki_cpu.read32 = m68k_read_memory_32;
+	m68ki_cpu.write8 = m68k_write_memory_8;
+	m68ki_cpu.write16 = m68k_write_memory_16;
+	m68ki_cpu.write32 = m68k_write_memory_32;
+#if M68K_SEPARATE_READS
+	// Notice : you need to overwrite these if you use them, these are default values
+	// when the reads are actually not separated.
+	// I initialize this because otherwise if M68K_SEPARATE_READS is defined then the
+	// calls would end here, and if uninitialized it would just crash on null pointer.
+	m68ki_cpu.read_im16 = m68k_read_memory_16;
+	m68ki_cpu.read_im32 = m68k_read_memory_32;
+	m68ki_cpu.read_pc8 = m68k_read_memory_8;
+	m68ki_cpu.read_pc16 = m68k_read_memory_16;
+	m68ki_cpu.read_pc32 = m68k_read_memory_32;
+#endif
 }
 
 /* Pulse the RESET line on the CPU */

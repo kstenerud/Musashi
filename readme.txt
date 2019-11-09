@@ -141,11 +141,14 @@ fetching from ROM or RAM.  Immediate reads are always from the program space
 
 To enable separate immediate reads:
 
-- In m68kconf.h, turn on M68K_SEPARATE_READ_IMM.
+- In m68kconf.h, turn on M68K_SEPARATE_READS.
 
-- In your host program, implement the following functions:
-    unsigned int  m68k_read_immediate_16(unsigned int address);
-    unsigned int  m68k_read_immediate_32(unsigned int address);
+- In your host program, assign those in m68ki_cpu :
+	read_im16
+	read_im32 for immediate reads
+	read_pc8
+	read_pc16
+	read_pc32 for pc relative reads
 
 - If you need to know the current PC (for banking and such), set
   M68K_MONITOR_PC to OPT_SPECIFY_HANDLER, and set M68K_SET_PC_CALLBACK(A) to

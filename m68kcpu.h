@@ -437,6 +437,13 @@ extern "C" {
 #define m68k_read_pcrelative_8(A) m68ki_read_program_8(A)
 #define m68k_read_pcrelative_16(A) m68ki_read_program_16(A)
 #define m68k_read_pcrelative_32(A) m68ki_read_program_32(A)
+#else
+#define m68k_read_immediate_16(A) m68ki_cpu.read_im16(A)
+#define m68k_read_immediate_32(A) m68ki_cpu.read_im32(A)
+
+#define m68k_read_pcrelative_8(A) m68ki_cpu.read_pc8(A)
+#define m68k_read_pcrelative_16(A) m68ki_cpu.read_pc16(A)
+#define m68k_read_pcrelative_32(A) m68ki_cpu.read_pc32(A)
 #endif /* M68K_SEPARATE_READS */
 
 
@@ -935,6 +942,20 @@ typedef struct
 	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
 	void (*instr_hook_callback)(unsigned int pc);     /* Called every instruction cycle prior to execution */
 
+	uint32 (*read8)(uint32 adr);
+	uint32 (*read16)(uint32 adr);
+	uint32 (*read32)(uint32 adr);
+
+	uint32 (*read_im16)(uint32 adr); // Immediate
+	uint32 (*read_im32)(uint32 adr);
+
+	uint32 (*read_pc8)(uint32 adr); // pc relative
+	uint32 (*read_pc16)(uint32 adr);
+	uint32 (*read_pc32)(uint32 adr);
+
+	void (*write8)(uint32 adr,uint32 value);
+	void (*write16)(uint32 adr,uint32 value);
+	void (*write32)(uint32 adr,uint32 value);
 } m68ki_cpu_core;
 
 
@@ -1048,42 +1069,42 @@ static inline uint m68ki_read_8_fc(uint address, uint fc)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	return m68k_read_memory_8(ADDRESS_68K(address));
+	return m68ki_cpu.read8(ADDRESS_68K(address));
 }
 static inline uint m68ki_read_16_fc(uint address, uint fc)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
-	return m68k_read_memory_16(ADDRESS_68K(address));
+	return m68ki_cpu.read16(ADDRESS_68K(address));
 }
 static inline uint m68ki_read_32_fc(uint address, uint fc)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
-	return m68k_read_memory_32(ADDRESS_68K(address));
+	return m68ki_cpu.read32(ADDRESS_68K(address));
 }
 
 static inline void m68ki_write_8_fc(uint address, uint fc, uint value)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
-	m68k_write_memory_8(ADDRESS_68K(address), value);
+	m68ki_cpu.write8(ADDRESS_68K(address), value);
 }
 static inline void m68ki_write_16_fc(uint address, uint fc, uint value)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
-	m68k_write_memory_16(ADDRESS_68K(address), value);
+	m68ki_cpu.write16(ADDRESS_68K(address), value);
 }
 static inline void m68ki_write_32_fc(uint address, uint fc, uint value)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
-	m68k_write_memory_32(ADDRESS_68K(address), value);
+	m68ki_cpu.write32(ADDRESS_68K(address), value);
 }
 
 #if M68K_SIMULATE_PD_WRITES
@@ -1877,7 +1898,7 @@ static inline void m68ki_exception_address_error(void)
 	 */
 	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET)
 	{
-m68k_read_memory_8(0x00ffff01);
+		m68ki_cpu.read8(0x00ffff01);
 		CPU_STOPPED = STOP_LEVEL_HALT;
 		return;
 	}
