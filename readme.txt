@@ -318,3 +318,13 @@ Then compile m68kcpu.o and m68kops.o. Add m68kdasm.o if you want the
 disassemble functions. When linking this to your project you will need libm
 for the fpu emulation of the 68040.
 
+Using some custom m68kconf.h outside Musashi's directory
+--------------------------------------------------------
+
+It can be useful to keep an untouched musashi directory in a project (from
+git for example) and maintain a separate m68kconf.h specific to the
+project. For this, pass -DMUSASHI_CNF="mycustomconfig.h" to gcc (or whatever
+compiler you use). Notice that if you use an unix shell (or make which uses
+the shell to launch its commands), then you need to escape the quotes like
+this : -DMUSASHI_CNF=\"mycustomconfig.h\"
+
