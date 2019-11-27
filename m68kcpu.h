@@ -1793,7 +1793,6 @@ static inline void m68ki_exception_privilege_violation(void)
 }
 
 extern jmp_buf m68ki_bus_error_jmp_buf;
-extern jmp_buf m68ki_bus_error_return_jmp_buf;
 
 #define m68ki_check_bus_error_trap() setjmp(m68ki_bus_error_jmp_buf)
 
