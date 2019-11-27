@@ -40,9 +40,7 @@ extern "C" {
 #include "m68k.h"
 #include <limits.h>
 
-#if M68K_EMULATE_ADDRESS_ERROR
 #include <setjmp.h>
-#endif /* M68K_EMULATE_ADDRESS_ERROR */
 
 /* ======================================================================== */
 /* ==================== ARCHITECTURE-DEPENDANT DEFINES ==================== */
