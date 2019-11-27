@@ -800,6 +800,7 @@ int m68k_execute(int num_cycles)
 		/* Main loop.  Keep going until we run out of clock cycles */
 		do
 		{
+			int i;
 			/* Set tracing accodring to T1. (T0 is done inside instruction) */
 			m68ki_trace_t1(); /* auto-disable (see m68kcpu.h) */
 
