@@ -311,6 +311,7 @@ extern "C" {
 #define CPU_TYPE         m68ki_cpu.cpu_type
 
 #define REG_DA           m68ki_cpu.dar /* easy access to data and address regs */
+#define REG_DA_SAVE           m68ki_cpu.dar_save
 #define REG_D            m68ki_cpu.dar
 #define REG_A            (m68ki_cpu.dar+8)
 #define REG_PPC 		 m68ki_cpu.ppc
@@ -351,6 +352,8 @@ extern "C" {
 #define CPU_SR_MASK      m68ki_cpu.sr_mask
 #define CPU_INSTR_MODE   m68ki_cpu.instr_mode
 #define CPU_RUN_MODE     m68ki_cpu.run_mode
+
+#define BUS_ERROR_OCCURRED m68ki_cpu.bus_error_occurred
 
 #define CYC_INSTRUCTION  m68ki_cpu.cyc_instruction
 #define CYC_EXCEPTION    m68ki_cpu.cyc_exception
@@ -873,6 +876,8 @@ typedef struct
 {
 	uint cpu_type;     /* CPU Type: 68000, 68010, 68EC020, or 68020 */
 	uint dar[16];      /* Data and Address Registers */
+	uint dar_save[16];  /* Saved Data and Address Registers (pushed onto the
+						   stack when a bus error occurs)*/
 	uint ppc;		   /* Previous program counter */
 	uint pc;           /* Program Counter */
 	uint sp[7];        /* User, Interrupt, and Master Stack Pointers */
@@ -904,6 +909,8 @@ typedef struct
 	uint sr_mask;      /* Implemented status register bits */
 	uint instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
 	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
+
+	uint bus_error_occurred;
 
 	/* Clocks required for instructions / exceptions */
 	uint cyc_bcc_notake_b;
@@ -1786,6 +1793,32 @@ static inline void m68ki_exception_privilege_violation(void)
 	/* Use up some clock cycles and undo the instruction's cycles */
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_PRIVILEGE_VIOLATION] - CYC_INSTRUCTION[REG_IR]);
 }
+
+extern jmp_buf m68ki_bus_error_jmp_buf;
+extern jmp_buf m68ki_bus_error_return_jmp_buf;
+
+#define m68ki_check_bus_error_trap() setjmp(m68ki_bus_error_jmp_buf)
+
+/* Exception for bus error */
+static inline void m68ki_exception_bus_error(void)
+{
+	int i;
+	BUS_ERROR_OCCURRED = 1;
+	/* Use up some clock cycles and undo the instruction's cycles */
+	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_BUS_ERROR] - CYC_INSTRUCTION[REG_IR]);
+
+	for (i = 15; i >= 0; i--){
+		REG_DA[i] = REG_DA_SAVE[i];
+	}
+
+	uint sr = m68ki_init_exception();
+	m68ki_stack_frame_1000(REG_PPC, sr, EXCEPTION_BUS_ERROR);
+
+	m68ki_jump_vector(EXCEPTION_BUS_ERROR);
+	longjmp(m68ki_bus_error_jmp_buf, 1);
+}
+
+extern int cpu_log_enabled;
 
 /* Exception for A-Line instructions */
 static inline void m68ki_exception_1010(void)

@@ -9212,10 +9212,36 @@ M68KMAKE_OP(rte, 32, ., .)
 				CPU_INSTR_MODE = INSTRUCTION_YES;
 				CPU_RUN_MODE = RUN_MODE_NORMAL;
 				return;
+			} else if (format_word == 8) {
+				/* Format 8 stack frame -- 68010 only. 29 word bus/address error */
+				new_sr = m68ki_pull_16();
+				new_pc = m68ki_pull_32();
+				m68ki_fake_pull_16();	/* format word */
+				m68ki_fake_pull_16();	/* special status word */
+				m68ki_fake_pull_32();	/* fault address */
+				m68ki_fake_pull_16();	/* unused/reserved */
+				m68ki_fake_pull_16();	/* data output buffer */
+				m68ki_fake_pull_16();	/* unused/reserved */
+				m68ki_fake_pull_16();	/* data input buffer */
+				m68ki_fake_pull_16();	/* unused/reserved */
+				m68ki_fake_pull_16();	/* instruction input buffer */
+				m68ki_fake_pull_32();	/* internal information, 16 words */
+				m68ki_fake_pull_32();	/* (actually, we use 8 DWORDs) */
+				m68ki_fake_pull_32();
+				m68ki_fake_pull_32();
+				m68ki_fake_pull_32();
+				m68ki_fake_pull_32();
+				m68ki_fake_pull_32();
+				m68ki_fake_pull_32();
+				m68ki_jump(new_pc);
+				m68ki_set_sr(new_sr);
+				CPU_INSTR_MODE = INSTRUCTION_YES;
+				CPU_RUN_MODE = RUN_MODE_NORMAL;
+				return;
 			}
 			CPU_INSTR_MODE = INSTRUCTION_YES;
 			CPU_RUN_MODE = RUN_MODE_NORMAL;
-			/* Not handling bus fault (9) */
+			/* Not handling other exception types (9) */
 			m68ki_exception_format_error();
 			return;
 		}
