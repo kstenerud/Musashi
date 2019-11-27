@@ -351,8 +351,6 @@ extern "C" {
 #define CPU_INSTR_MODE   m68ki_cpu.instr_mode
 #define CPU_RUN_MODE     m68ki_cpu.run_mode
 
-#define BUS_ERROR_OCCURRED m68ki_cpu.bus_error_occurred
-
 #define CYC_INSTRUCTION  m68ki_cpu.cyc_instruction
 #define CYC_EXCEPTION    m68ki_cpu.cyc_exception
 #define CYC_BCC_NOTAKE_B m68ki_cpu.cyc_bcc_notake_b
@@ -907,8 +905,6 @@ typedef struct
 	uint sr_mask;      /* Implemented status register bits */
 	uint instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
 	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
-
-	uint bus_error_occurred;
 
 	/* Clocks required for instructions / exceptions */
 	uint cyc_bcc_notake_b;
@@ -1800,7 +1796,19 @@ extern jmp_buf m68ki_bus_error_jmp_buf;
 static inline void m68ki_exception_bus_error(void)
 {
 	int i;
-	BUS_ERROR_OCCURRED = 1;
+
+	/* If we were processing a bus error, address error, or reset,
+	 * this is a catastrophic failure.
+	 * Halt the CPU
+	 */
+	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET)
+	{
+m68k_read_memory_8(0x00ffff01);
+		CPU_STOPPED = STOP_LEVEL_HALT;
+		return;
+	}
+	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
+
 	/* Use up some clock cycles and undo the instruction's cycles */
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_BUS_ERROR] - CYC_INSTRUCTION[REG_IR]);
 
