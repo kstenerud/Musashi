@@ -341,6 +341,10 @@ unsigned int m68k_get_virq(unsigned int level);
 void m68k_pulse_halt(void);
 
 
+/* Trigger a bus error exception */
+void m68k_pulse_bus_error(void);
+
+
 /* Context switching to allow multiple CPUs */
 
 /* Get the size of the cpu context in bytes */

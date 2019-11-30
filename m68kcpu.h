@@ -40,9 +40,7 @@ extern "C" {
 #include "m68k.h"
 #include <limits.h>
 
-#if M68K_EMULATE_ADDRESS_ERROR
 #include <setjmp.h>
-#endif /* M68K_EMULATE_ADDRESS_ERROR */
 
 /* ======================================================================== */
 /* ==================== ARCHITECTURE-DEPENDANT DEFINES ==================== */
@@ -311,6 +309,7 @@ extern "C" {
 #define CPU_TYPE         m68ki_cpu.cpu_type
 
 #define REG_DA           m68ki_cpu.dar /* easy access to data and address regs */
+#define REG_DA_SAVE           m68ki_cpu.dar_save
 #define REG_D            m68ki_cpu.dar
 #define REG_A            (m68ki_cpu.dar+8)
 #define REG_PPC 		 m68ki_cpu.ppc
@@ -873,6 +872,8 @@ typedef struct
 {
 	uint cpu_type;     /* CPU Type: 68000, 68010, 68EC020, or 68020 */
 	uint dar[16];      /* Data and Address Registers */
+	uint dar_save[16];  /* Saved Data and Address Registers (pushed onto the
+						   stack when a bus error occurs)*/
 	uint ppc;		   /* Previous program counter */
 	uint pc;           /* Program Counter */
 	uint sp[7];        /* User, Interrupt, and Master Stack Pointers */
@@ -1786,6 +1787,43 @@ static inline void m68ki_exception_privilege_violation(void)
 	/* Use up some clock cycles and undo the instruction's cycles */
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_PRIVILEGE_VIOLATION] - CYC_INSTRUCTION[REG_IR]);
 }
+
+extern jmp_buf m68ki_bus_error_jmp_buf;
+
+#define m68ki_check_bus_error_trap() setjmp(m68ki_bus_error_jmp_buf)
+
+/* Exception for bus error */
+static inline void m68ki_exception_bus_error(void)
+{
+	int i;
+
+	/* If we were processing a bus error, address error, or reset,
+	 * this is a catastrophic failure.
+	 * Halt the CPU
+	 */
+	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET)
+	{
+m68k_read_memory_8(0x00ffff01);
+		CPU_STOPPED = STOP_LEVEL_HALT;
+		return;
+	}
+	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
+
+	/* Use up some clock cycles and undo the instruction's cycles */
+	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_BUS_ERROR] - CYC_INSTRUCTION[REG_IR]);
+
+	for (i = 15; i >= 0; i--){
+		REG_DA[i] = REG_DA_SAVE[i];
+	}
+
+	uint sr = m68ki_init_exception();
+	m68ki_stack_frame_1000(REG_PPC, sr, EXCEPTION_BUS_ERROR);
+
+	m68ki_jump_vector(EXCEPTION_BUS_ERROR);
+	longjmp(m68ki_bus_error_jmp_buf, 1);
+}
+
+extern int cpu_log_enabled;
 
 /* Exception for A-Line instructions */
 static inline void m68ki_exception_1010(void)

@@ -82,6 +82,8 @@ uint    m68ki_aerr_address;
 uint    m68ki_aerr_write_mode;
 uint    m68ki_aerr_fc;
 
+jmp_buf m68ki_bus_error_jmp_buf;
+
 /* Used by shift & rotate instructions */
 const uint8 m68ki_shift_8_table[65] =
 {
@@ -793,9 +795,12 @@ int m68k_execute(int num_cycles)
 		/* Return point if we had an address error */
 		m68ki_set_address_error_trap(); /* auto-disable (see m68kcpu.h) */
 
+		m68ki_check_bus_error_trap();
+
 		/* Main loop.  Keep going until we run out of clock cycles */
 		do
 		{
+			int i;
 			/* Set tracing accodring to T1. (T0 is done inside instruction) */
 			m68ki_trace_t1(); /* auto-disable (see m68kcpu.h) */
 
@@ -807,6 +812,11 @@ int m68k_execute(int num_cycles)
 
 			/* Record previous program counter */
 			REG_PPC = REG_PC;
+
+			/* Record previous D/A register state (in case of bus error) */
+			for (i = 15; i >= 0; i--){
+				REG_DA_SAVE[i] = REG_DA[i];
+			}
 
 			/* Read an instruction and call its handler */
 			REG_IR = m68ki_read_imm_16();
@@ -911,6 +921,12 @@ void m68k_init(void)
 	m68k_set_pc_changed_callback(NULL);
 	m68k_set_fc_callback(NULL);
 	m68k_set_instr_hook_callback(NULL);
+}
+
+/* Trigger a Bus Error exception */
+void m68k_pulse_bus_error(void)
+{
+	m68ki_exception_bus_error();
 }
 
 /* Pulse the RESET line on the CPU */
