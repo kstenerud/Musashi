@@ -1,3 +1,32 @@
+/* ======================================================================== */
+/* ========================= LICENSING & COPYRIGHT ======================== */
+/* ======================================================================== */
+/*
+ *                                  MUSASHI
+ *                                Version 3.32
+ *
+ * A portable Motorola M680x0 processor emulation engine.
+ * Copyright Karl Stenerud.  All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -17,7 +46,7 @@ extern void exit(int);
 static NORETURN void fatalerror(char *format, ...) {
       va_list ap;
       va_start(ap,format);
-      fprintf(stderr,format,ap);
+      vfprintf(stderr,format,ap);
       va_end(ap);
       exit(1);
 }
@@ -72,14 +101,26 @@ static inline int TEST_CONDITION(int condition)
 		case 0x01:		return (z);							// Equal
 		case 0x0e:		return (!z);						// Not Equal
 		case 0x0f:		return 1;							// True
+		case 0x02:	//OGT
 		case 0x12:		return (!(nan || z || n));			// Greater Than
+		case 0x03:	//OGE
 		case 0x13:		return (z || !(nan || n));			// Greater or Equal
+		case 0x04:	//OLT
 		case 0x14:		return (n && !(nan || z));			// Less Than
+		case 0x05:	//OLE
 		case 0x15:		return (z || (n && !nan));			// Less Than or Equal
+		case 0x0a:	//UGT
 		case 0x1a:		return (nan || !(n || z));			// Not Less Than or Equal
+		case 0x0b:	//UGE
 		case 0x1b:		return (nan || z || !n);			// Not Less Than
+		case 0x0c:	//ULT
 		case 0x1c:		return (nan || (n && !z));			// Not Greater or Equal Than
+		case 0x0d:	//ULE
 		case 0x1d:		return (nan || z || n);				// Not Greater Than
+		case 0x06:		return (!(nan || z));				// OGL
+		case 0x09:		return (nan || z);				// UEQ
+		case 0x07:		return (!nan);					// OR
+		case 0x08:		return (nan);					// UN
 
 		default:		fatalerror("M68040: test_condition: unhandled condition %02X\n", condition);
 	}
@@ -343,10 +384,26 @@ static uint64 READ_EA_64(int ea)
 			h2 = m68ki_read_32(ea+4);
 			return  (uint64)(h1) << 32 | (uint64)(h2);
 		}
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_16();
+			h1 = m68ki_read_32(ea+0);
+			h2 = m68ki_read_32(ea+4);
+			return  (uint64)(h1) << 32 | (uint64)(h2);
+		}
 		case 7:
 		{
 			switch (reg)
 			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					h1 = m68ki_read_32(ea+0);
+					h2 = m68ki_read_32(ea+4);
+					return  (uint64)(h1) << 32 | (uint64)(h2);
+				}
 				case 4:		// #<data>
 				{
 					h1 = OPER_I_32();
@@ -380,8 +437,8 @@ static void WRITE_EA_64(int ea, uint64 data)
 		case 2:		// (An)
 		{
 			uint32 ea = REG_A[reg];
-			m68ki_write_32(ea, (uint32)(data >> 32));
-			m68ki_write_32(ea, (uint32)(data));
+			m68ki_write_32(ea+0, (uint32)(data >> 32));
+			m68ki_write_32(ea+4, (uint32)(data));
 			break;
 		}
 		case 4:		// -(An)
@@ -400,34 +457,214 @@ static void WRITE_EA_64(int ea, uint64 data)
 			m68ki_write_32(ea+4, (uint32)(data));
 			break;
 		}
+
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_16();
+			m68ki_write_32(ea+0, (uint32)(data >> 32));
+			m68ki_write_32(ea+4, (uint32)(data));
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					m68ki_write_32(ea+0, (uint32)(data >> 32));
+					m68ki_write_32(ea+4, (uint32)(data));
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					uint32 ea = EA_PCDI_32();
+					m68ki_write_32(ea+0, (uint32)(data >> 32));
+					m68ki_write_32(ea+4, (uint32)(data));
+					break;
+				}
+				default:	fatalerror("MC68040: WRITE_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
 		default:	fatalerror("MC68040: WRITE_EA_64: unhandled mode %d, reg %d, data %08X%08X at %08X\n", mode, reg, (uint32)(data >> 32), (uint32)(data), REG_PC);
 	}
 }
 
-static fp_reg READ_EA_FPE(int ea)
+static void d_to_h3(double d, uint32 * h)
+{
+	uint64 n = *(uint64 *)&d;
+	uint64 m = n & 0x000fffffffffffffLL;
+	uint32 exp = ((n>>52)&0x7ff) - 1023;
+	*(uint64 *)h = (m << 11) | 0x8000000000000000L;
+	h[2] = ((n>>32)&0x80000000) | ((exp+16383LL)<<16);
+}
+
+static double h3_to_d(uint32 * h)
+{
+	uint64 m = *(uint64 *)h;
+	uint32 exp = ((h[2]>>16)&0x7fff) - 16383;
+	uint64 n = ((h[2]&0x80000000LL)<<32) | ((exp + 1023LL)<<52) | ((m<<1)>>12);
+	double d = *(double *)&n;
+/*
+	fprintf(stderr, "read xdouble %e %16Lx - %08x %08x %08x %d %16Lx\n", d, n, h[2], h[1], h[0], exp, m);
+	uint32 x[3] = {0, 0, 0};
+	d_to_h3(d, x);
+	fprintf(stderr, "-> %08x %08x %08x\n", x[2], x[1], x[0]);
+*/
+	return d;
+}
+
+static double READ_EA_96(int ea)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+	uint32 h[3];
+	uint32 addr;
+
+	switch (mode)
+	{
+		case 2:		// (An)
+		{
+			addr = REG_A[reg];
+			break;
+		}
+		case 3:		// (An)+
+		{
+			addr = REG_A[reg];
+			REG_A[reg] += 12;
+			break;
+		}
+		case 5:		// (d16, An)
+		{
+			addr = EA_AY_DI_32();
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					addr = (d1 << 16) | d2;
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					addr = EA_PCDI_32();
+					break;
+				}
+				case 4:		// #<data>
+				{
+					h[2] = OPER_I_32();
+					h[1] = OPER_I_32();
+					h[0] = OPER_I_32();
+					return  *(long double *)h;
+				}
+				default:	fatalerror("MC68040: READ_EA_96: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
+		default:	fatalerror("MC68040: READ_EA_96: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+	}
+
+	h[2] = m68ki_read_32(addr+0);
+	h[1] = m68ki_read_32(addr+4);
+	h[0] = m68ki_read_32(addr+8);
+
+	return h3_to_d(h);
+}
+
+static void WRITE_EA_96(int ea, double d)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	uint32 h[3] = {0, 0, 0};
+	uint32 addr;
+
+	switch (mode)
+	{
+		case 2:		// (An)
+		{
+			addr = REG_A[reg];
+			break;
+		}
+		case 4:		// -(An)
+		{
+			REG_A[reg] -= 12;
+			addr = REG_A[reg];
+			break;
+		}
+		case 5:		// (d16, An)
+		{
+			addr = EA_AY_DI_32();
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					addr = (d1 << 16) | d2;
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					addr = EA_PCDI_32();
+					break;
+				}
+				default:	fatalerror("MC68040: WRITE_EA_64: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
+		default:	fatalerror("MC68040: WRITE_EA_96: unhandled mode %d, reg %d, data %08X%08X%08X at %08X\n", mode, reg, h[0], h[1], h[2], REG_PC);
+	}
+	d_to_h3(d, h);
+	m68ki_write_32(addr+0, h[2]);
+	m68ki_write_32(addr+4, h[1]);
+	m68ki_write_32(addr+8, h[0]);
+}
+
+
+static fp_reg READ_EA_FPE(int ea, uint32 addr)
 {
 	fp_reg r;
 	int mode = (ea >> 3) & 0x7;
 	int reg = (ea & 0x7);
 
-	// TODO: convert to extended floating-point!
+	uint32 h[3];
 
 	switch (mode)
 	{
 		case 3:		// (An)+
 		{
-			uint32 d1,d2;
-			uint32 ea = REG_A[reg];
+			addr = REG_A[reg];
 			REG_A[reg] += 12;
-			d1 = m68ki_read_32(ea+0);
-			d2 = m68ki_read_32(ea+4);
-			// d3 = m68ki_read_32(ea+8);
-			r.i = (uint64)(d1) << 32 | (uint64)(d2);
+			break;
+		}
+		case 5:		// (d16, An)
+		{
+			// addr as parameter
 			break;
 		}
 		default:	fatalerror("MC68040: READ_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
 	}
 
+	h[2] = m68ki_read_32(addr+0);
+	h[1] = m68ki_read_32(addr+4);
+	h[0] = m68ki_read_32(addr+8);
+
+	r.f = h3_to_d(h);
+
+//	fprintf(stderr, "set fp to %f at addr %08x\n", r.f, addr);
 	return r;
 }
 
@@ -436,22 +673,23 @@ static void WRITE_EA_FPE(int ea, fp_reg fpr)
 	int mode = (ea >> 3) & 0x7;
 	int reg = (ea & 0x7);
 
-	// TODO: convert to extended floating-point!
+	uint32 addr;
 
 	switch (mode)
 	{
 		case 4:		// -(An)
 		{
-			uint32 ea;
 			REG_A[reg] -= 12;
-			ea = REG_A[reg];
-			m68ki_write_32(ea+0, (uint32)(fpr.i >> 32));
-			m68ki_write_32(ea+4, (uint32)(fpr.i));
-			m68ki_write_32(ea+8, 0);
+			addr = REG_A[reg];
 			break;
 		}
 		default:	fatalerror("MC68040: WRITE_EA_FPE: unhandled mode %d, reg %d, data %f at %08X\n", mode, reg, fpr.f, REG_PC);
 	}
+	uint32 h[3] = {0, 0, 0};
+	d_to_h3(fpr.f, h);
+	m68ki_write_32(addr+0, h[2]);
+	m68ki_write_32(addr+4, h[1]);
+	m68ki_write_32(addr+8, h[0]);
 }
 
 
@@ -482,7 +720,7 @@ static void fpgen_rm_reg(uint16 w2)
 			}
 			case 2:		// Extended-precision Real
 			{
-				fatalerror("fpgen_rm_reg: extended-precision real load unimplemented at %08X\n", REG_PC-4);
+				source = (double)READ_EA_96(ea);
 				break;
 			}
 			case 3:		// Packed-decimal Real
@@ -508,7 +746,43 @@ static void fpgen_rm_reg(uint16 w2)
 				source = (double)(d);
 				break;
 			}
-			default:	fatalerror("fmove_rm_reg: invalid source specifier at %08X\n", REG_PC-4);
+			case 7:
+			{
+				if (!rm)
+					fatalerror("fpgen_rm_reg: fmovecr expects rm=1\n");
+
+				switch (opmode)
+				{
+					case 0x00: source = M_PI; break;
+					case 0x0b: source = M_LN10; break;
+					case 0x0c: source = M_E; break;
+					case 0x0d: source = M_LOG2E; break;
+					case 0x0e: source = M_LOG10E; break;
+					case 0x0f: source = 0.0; break;
+					case 0x30: source = 1e-2; break;
+					case 0x31: source = 1e-10; break;
+					case 0x32: source = 1.; break;
+					case 0x33: source = 1e1; break;
+					case 0x34: source = 1e2; break;
+					case 0x35: source = 1e4; break;
+					case 0x36: source = 1e8; break;
+					case 0x37: source = 1e16; break;
+					case 0x38: source = 1e32; break;
+					case 0x39: source = 1e64; break;
+					case 0x3a: source = 1e128; break;
+					case 0x3b: source = 1e256; break;
+					case 0x3c: source = 1e512; break;
+					case 0x3d: source = 1e1024; break;
+					case 0x3e: source = 1e2048; break;
+					case 0x3f: source = 1e4096; break;
+
+					default:
+						fatalerror("fpgen_rm_reg: fmovecr unknown offset %d\n", opmode);
+				}
+
+				opmode = 0; // it's a move
+				break;
+			}
 		}
 	}
 	else
@@ -521,6 +795,12 @@ static void fpgen_rm_reg(uint16 w2)
 		case 0x00:		// FMOVE
 		{
 			REG_FP[dst].f = source;
+			USE_CYCLES(4);
+			break;
+		}
+		case 0x03:		// FINTRZ
+		{
+			REG_FP[dst].f = (int)source;
 			USE_CYCLES(4);
 			break;
 		}
@@ -545,9 +825,18 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(3);
 			break;
 		}
+
 		case 0x20:		// FDIV
 		{
 			REG_FP[dst].f /= source;
+			SET_CONDITION_CODES(REG_FP[dst]);
+			USE_CYCLES(43);
+			break;
+		}
+		case 0x24:		// FSGLDIV
+		{
+			REG_FP[dst].f = (float)(REG_FP[dst].f / source);
+			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(43);
 			break;
 		}
@@ -561,6 +850,13 @@ static void fpgen_rm_reg(uint16 w2)
 		case 0x23:		// FMUL
 		{
 			REG_FP[dst].f *= source;
+			SET_CONDITION_CODES(REG_FP[dst]);
+			USE_CYCLES(11);
+			break;
+		}
+		case 0x27:		// FSGLMUL
+		{
+			REG_FP[dst].f = (float)(REG_FP[dst].f * source);
 			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(11);
 			break;
@@ -589,8 +885,21 @@ static void fpgen_rm_reg(uint16 w2)
 			break;
 		}
 
+
+		// FSGLMUL
+
 		default:	fatalerror("fpgen_rm_reg: unimplemented opmode %02X at %08X\n", opmode, REG_PC-4);
 	}
+}
+
+static void fscc_mem(void)
+{
+	int ea = REG_IR & 0x3f;
+	int w2 = OPER_I_16();
+	int flag = TEST_CONDITION(w2 & 0x3f) ? 0xff : 0;
+
+	WRITE_EA_32(ea, flag);
+	USE_CYCLES(12);
 }
 
 static void fmove_reg_mem(uint16 w2)
@@ -617,7 +926,7 @@ static void fmove_reg_mem(uint16 w2)
 		}
 		case 2:		// Extended-precision Real
 		{
-			fatalerror("fmove_reg_mem: extended-precision real store unimplemented at %08X\n", REG_PC-4);
+			WRITE_EA_96(ea, REG_FP[src].f);
 			break;
 		}
 		case 3:		// Packed-decimal Real with Static K-factor
@@ -683,7 +992,7 @@ static void fmove_fpcr(uint16 w2)
 
 static void fmovem(uint16 w2)
 {
-	int i;
+	int i, j;
 	int ea = REG_IR & 0x3f;
 	int dir = (w2 >> 13) & 0x1;
 	int mode = (w2 >> 11) & 0x3;
@@ -715,12 +1024,18 @@ static void fmovem(uint16 w2)
 		{
 			case 2:		// Static register list, postincrement addressing mode
 			{
+				if (((ea >> 3) & 0x7) == 5)
+					j = EA_AY_DI_32();
+				else
+					j = 0;
+
 				for (i=0; i < 8; i++)
 				{
 					if (reglist & (1 << i))
 					{
-						REG_FP[7-i] = READ_EA_FPE(ea);
+						REG_FP[7-i] = READ_EA_FPE(ea, j);
 						USE_CYCLES(2);
+						j += 12;
 					}
 				}
 				break;
@@ -807,6 +1122,12 @@ void m68040_fpu_op0(void)
 			break;
 		}
 
+		case 1:	// FScc
+		{
+			fscc_mem();
+			break;
+		}
+
 		case 2:		// FBcc disp16
 		{
 			fbcc16();
@@ -825,7 +1146,6 @@ void m68040_fpu_op0(void)
 void m68040_fpu_op1(void)
 {
 	int ea = REG_IR & 0x3f;
-
 	switch ((REG_IR >> 6) & 0x3)
 	{
 		case 0:		// FSAVE <ea>

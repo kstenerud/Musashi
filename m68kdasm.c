@@ -358,7 +358,7 @@ static char* make_signed_hex_str_16(uint val)
 
 static char* make_signed_hex_str_32(uint val)
 {
-	static char str[20];
+	static char str[22];
 
 	val &= 0xffffffff;
 
@@ -376,7 +376,7 @@ static char* make_signed_hex_str_32(uint val)
 /* make string of immediate value */
 static char* get_imm_str_s(uint size)
 {
-	static char str[15];
+	static char str[32];
 	if(size == 0)
 		sprintf(str, "#%s", make_signed_hex_str_8(read_imm_8()));
 	else if(size == 1)
@@ -388,7 +388,7 @@ static char* get_imm_str_s(uint size)
 
 static char* get_imm_str_u(uint size)
 {
-	static char str[15];
+	static char str[22];
 	if(size == 0)
 		sprintf(str, "#$%x", read_imm_8() & 0xff);
 	else if(size == 1)
@@ -1679,6 +1679,11 @@ static void d68040_fpu(void)
 	src = (w2 >> 10) & 0x7;
 	dst_reg = (w2 >> 7) & 0x7;
 
+	if ((g_cpu_ir & 0x1ff) == 0 && (w2 >> 13) == 0x2 && src == 0x7)
+	{
+		sprintf(g_dasm_str, "fmovecr.x   #%d, FP%d", w2 & 0x7f, dst_reg);
+	}
+	else
 	switch ((w2 >> 13) & 0x7)
 	{
 		case 0x0:
