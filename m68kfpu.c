@@ -777,7 +777,7 @@ static void fpgen_rm_reg(uint16 w2)
 					case 0x3f: source = 1e4096L; break;
 
 					default:
-						fatalerror("fpgen_rm_reg: fmovecr unknown offset %d\n", opmode);
+						source = 0.0;
 				}
 
 				opmode = 0; // it's a move
