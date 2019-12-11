@@ -771,10 +771,10 @@ static void fpgen_rm_reg(uint16 w2)
 					case 0x39: source = 1e64; break;
 					case 0x3a: source = 1e128; break;
 					case 0x3b: source = 1e256; break;
-					case 0x3c: source = 1e512; break;
-					case 0x3d: source = 1e1024; break;
-					case 0x3e: source = 1e2048; break;
-					case 0x3f: source = 1e4096; break;
+					case 0x3c: source = 1e512L; break;
+					case 0x3d: source = 1e1024L; break;
+					case 0x3e: source = 1e2048L; break;
+					case 0x3f: source = 1e4096L; break;
 
 					default:
 						fatalerror("fpgen_rm_reg: fmovecr unknown offset %d\n", opmode);
