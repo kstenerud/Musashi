@@ -754,7 +754,7 @@ static void fpgen_rm_reg(uint16 w2)
 				switch (opmode)
 				{
 					case 0x00: source = M_PI; break;
-					case 0x0b: source = M_LN10; break;
+					case 0x0b: source = 0.301029995663981195214; break;
 					case 0x0c: source = M_E; break;
 					case 0x0d: source = M_LOG2E; break;
 					case 0x0e: source = M_LOG10E; break;
