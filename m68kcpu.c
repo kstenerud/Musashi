@@ -53,7 +53,6 @@ extern void m68ki_build_opcode_table(void);
 
 int  m68ki_initial_cycles;
 int  m68ki_remaining_cycles = 0;                     /* Number of clocks remaining */
-uint m68ki_reset_cycles;
 uint m68ki_tracing = 0;
 uint m68ki_address_space;
 
@@ -903,9 +902,9 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 int m68k_execute(int num_cycles)
 {
 	/* eat up any reset cycles */
-	if (m68ki_reset_cycles) {
-	    int rc = m68ki_reset_cycles;
-	    m68ki_reset_cycles = 0;
+	if (RESET_CYCLES) {
+	    int rc = RESET_CYCLES;
+	    RESET_CYCLES = 0;
 	    num_cycles -= rc;
 	    if (num_cycles <= 0)
 		return rc;
@@ -1080,7 +1079,7 @@ void m68k_pulse_reset(void)
 
 	CPU_RUN_MODE = RUN_MODE_NORMAL;
 
-	m68ki_reset_cycles = CYC_EXCEPTION[EXCEPTION_RESET];
+	RESET_CYCLES = CYC_EXCEPTION[EXCEPTION_RESET];
 }
 
 /* Pulse the HALT line on the CPU */
