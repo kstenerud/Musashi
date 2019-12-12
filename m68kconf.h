@@ -67,6 +67,7 @@
 #define M68K_EMULATE_010            OPT_ON
 #define M68K_EMULATE_EC020          OPT_ON
 #define M68K_EMULATE_020            OPT_ON
+#define M68K_EMULATE_030            OPT_ON
 #define M68K_EMULATE_040            OPT_ON
 
 
