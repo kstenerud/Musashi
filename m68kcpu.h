@@ -267,11 +267,7 @@ extern "C" {
 #endif /* M68K_INT_GT_32_BIT || M68K_USE_64_BIT */
 
 /* Simulate address lines of 68k family */
-#if M68K_EMULATE_PMMU
-#define ADDRESS_68K(A) (PMMU_ENABLED ? pmmu_translate_addr((A)&CPU_ADDRESS_MASK) : ((A)&CPU_ADDRESS_MASK))
-#else
 #define ADDRESS_68K(A) ((A)&CPU_ADDRESS_MASK)
-#endif
 
 
 /* Shift & Rotate Macros. */
@@ -1032,6 +1028,14 @@ static inline uint m68ki_read_imm_16(void)
 {
 	m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_PROGRAM); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error(REG_PC, MODE_READ, FLAG_S | FUNCTION_CODE_USER_PROGRAM); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_SEPARATE_READS
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+#endif
+
 #if M68K_EMULATE_PREFETCH
 {
 	uint result;
@@ -1060,6 +1064,13 @@ static inline uint m68ki_read_imm_8(void)
 
 static inline uint m68ki_read_imm_32(void)
 {
+#if M68K_SEPARATE_READS
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+#endif
+
 #if M68K_EMULATE_PREFETCH
 	uint temp_val;
 
@@ -1090,8 +1101,6 @@ static inline uint m68ki_read_imm_32(void)
 #endif /* M68K_EMULATE_PREFETCH */
 }
 
-
-
 /* ------------------------- Top level read/write ------------------------- */
 
 /* Handles all memory accesses (except for immediate reads if they are
@@ -1104,6 +1113,12 @@ static inline uint m68ki_read_8_fc(uint address, uint fc)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	return m68k_read_memory_8(ADDRESS_68K(address));
 }
 static inline uint m68ki_read_16_fc(uint address, uint fc)
@@ -1111,6 +1126,12 @@ static inline uint m68ki_read_16_fc(uint address, uint fc)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	return m68k_read_memory_16(ADDRESS_68K(address));
 }
 static inline uint m68ki_read_32_fc(uint address, uint fc)
@@ -1118,6 +1139,12 @@ static inline uint m68ki_read_32_fc(uint address, uint fc)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	return m68k_read_memory_32(ADDRESS_68K(address));
 }
 
@@ -1125,6 +1152,12 @@ static inline void m68ki_write_8_fc(uint address, uint fc, uint value)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_8(ADDRESS_68K(address), value);
 }
 static inline void m68ki_write_16_fc(uint address, uint fc, uint value)
@@ -1132,6 +1165,12 @@ static inline void m68ki_write_16_fc(uint address, uint fc, uint value)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_16(ADDRESS_68K(address), value);
 }
 static inline void m68ki_write_32_fc(uint address, uint fc, uint value)
@@ -1139,6 +1178,12 @@ static inline void m68ki_write_32_fc(uint address, uint fc, uint value)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_32(ADDRESS_68K(address), value);
 }
 
@@ -1148,6 +1193,12 @@ static inline void m68ki_write_32_pd_fc(uint address, uint fc, uint value)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_32_pd(ADDRESS_68K(address), value);
 }
 #endif
