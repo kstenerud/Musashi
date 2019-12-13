@@ -1,20 +1,10 @@
 #include <math.h>
-#include <stdarg.h>
 #include <stdio.h>
-#include "m68kcpu.h"
+#include <stdarg.h>
 
 extern void exit(int);
 
-#if defined(_MSC_VER)
-#  define NORETURN __declspec(noreturn)
-#elif defined(__clang__) || defined(__GNUC__)
-#  define NORETURN __attribute__((noreturn))
-#else
-#  define NORETURN
-#endif
-
-// TODO: Remove this and replace with a non-fatal signaling mechanism
-static NORETURN void fatalerror(char *format, ...) {
+static void fatalerror(char *format, ...) {
       va_list ap;
       va_start(ap,format);
       fprintf(stderr,format,ap);
@@ -98,6 +88,11 @@ static uint8 READ_EA_8(int ea)
 		{
 			return REG_D[reg];
 		}
+		case 2: 	// (An)
+		{
+			uint32 ea = REG_A[reg];
+			return m68ki_read_8(ea);
+		}
 		case 5:		// (d16, An)
 		{
 			uint32 ea = EA_AY_DI_8();
@@ -112,6 +107,11 @@ static uint8 READ_EA_8(int ea)
 		{
 			switch (reg)
 			{
+				case 0:		// (xxx).W
+				{
+					uint32 ea = (uint32)OPER_I_16();
+					return m68ki_read_8(ea);
+				}
 				case 1:		// (xxx).L
 				{
 					uint32 d1 = OPER_I_16();
@@ -163,6 +163,11 @@ static uint16 READ_EA_16(int ea)
 		{
 			switch (reg)
 			{
+				case 0:		// (xxx).W
+				{
+					uint32 ea = (uint32)OPER_I_16();
+					return m68ki_read_16(ea);
+				}
 				case 1:		// (xxx).L
 				{
 					uint32 d1 = OPER_I_16();
@@ -220,6 +225,11 @@ static uint32 READ_EA_32(int ea)
 		{
 			switch (reg)
 			{
+				case 0:		// (xxx).W
+				{
+					uint32 ea = (uint32)OPER_I_16();
+					return m68ki_read_32(ea);
+				}
 				case 1:		// (xxx).L
 				{
 					uint32 d1 = OPER_I_16();
@@ -243,74 +253,6 @@ static uint32 READ_EA_32(int ea)
 		default:	fatalerror("MC68040: READ_EA_32: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
 	}
 	return 0;
-}
-
-static void WRITE_EA_32(int ea, uint32 data)
-{
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
-
-	switch (mode)
-	{
-		case 0:		// Dn
-		{
-			REG_D[reg] = data;
-			break;
-		}
-		case 2:		// (An)
-		{
-			uint32 ea = REG_A[reg];
-			m68ki_write_32(ea, data);
-			break;
-		}
-		case 3:		// (An)+
-		{
-			uint32 ea = EA_AY_PI_32();
-			m68ki_write_32(ea, data);
-			break;
-		}
-		case 4:		// -(An)
-		{
-			uint32 ea = EA_AY_PD_32();
-			m68ki_write_32(ea, data);
-			break;
-		}
-		case 5:		// (d16, An)
-		{
-			uint32 ea = EA_AY_DI_32();
-			m68ki_write_32(ea, data);
-			break;
-		}
-		case 6:		// (An) + (Xn) + d8
-		{
-			uint32 ea = EA_AY_IX_32();
-			m68ki_write_32(ea, data);
-			break;
-		}
-		case 7:
-		{
-			switch (reg)
-			{
-				case 1:		// (xxx).L
-				{
-					uint32 d1 = OPER_I_16();
-					uint32 d2 = OPER_I_16();
-					uint32 ea = (d1 << 16) | d2;
-					m68ki_write_32(ea, data);
-					break;
-				}
-				case 2:		// (d16, PC)
-				{
-					uint32 ea = EA_PCDI_32();
-					m68ki_write_32(ea, data);
-					break;
-				}
-				default:	fatalerror("MC68040: WRITE_EA_32: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
-			}
-			break;
-		}
-		default:	fatalerror("MC68040: WRITE_EA_32: unhandled mode %d, reg %d, data %08X at %08X\n", mode, reg, data, REG_PC);
-	}
 }
 
 static uint64 READ_EA_64(int ea)
@@ -370,6 +312,215 @@ static uint64 READ_EA_64(int ea)
 	return 0;
 }
 
+static void WRITE_EA_8(int ea, uint8 data)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	switch (mode)
+	{
+		case 0:		// Dn
+		{
+			REG_D[reg] = data;
+			break;
+		}
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			m68ki_write_8(ea, data);
+			break;
+		}
+		case 3:		// (An)+
+		{
+			uint32 ea = EA_AY_PI_8();
+			m68ki_write_8(ea, data);
+			break;
+		}
+		case 4:		// -(An)
+		{
+			uint32 ea = EA_AY_PD_8();
+			m68ki_write_8(ea, data);
+			break;
+		}
+		case 5:		// (d16, An)
+		{
+			uint32 ea = EA_AY_DI_8();
+			m68ki_write_8(ea, data);
+			break;
+		}
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_8();
+			m68ki_write_8(ea, data);
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).B
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					m68ki_write_8(ea, data);
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					uint32 ea = EA_PCDI_16();
+					m68ki_write_8(ea, data);
+					break;
+				}
+				default:	fatalerror("MC68040: WRITE_EA_8: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
+		default:	fatalerror("MC68040: WRITE_EA_8: unhandled mode %d, reg %d, data %08X at %08X\n", mode, reg, data, REG_PC);
+	}
+}
+
+static void WRITE_EA_16(int ea, uint16 data)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	switch (mode)
+	{
+		case 0:		// Dn
+		{
+			REG_D[reg] = data;
+			break;
+		}
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			m68ki_write_16(ea, data);
+			break;
+		}
+		case 3:		// (An)+
+		{
+			uint32 ea = EA_AY_PI_16();
+			m68ki_write_16(ea, data);
+			break;
+		}
+		case 4:		// -(An)
+		{
+			uint32 ea = EA_AY_PD_16();
+			m68ki_write_16(ea, data);
+			break;
+		}
+		case 5:		// (d16, An)
+		{
+			uint32 ea = EA_AY_DI_16();
+			m68ki_write_16(ea, data);
+			break;
+		}
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_16();
+			m68ki_write_16(ea, data);
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).W
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					m68ki_write_16(ea, data);
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					uint32 ea = EA_PCDI_16();
+					m68ki_write_16(ea, data);
+					break;
+				}
+				default:	fatalerror("MC68040: WRITE_EA_16: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
+		default:	fatalerror("MC68040: WRITE_EA_16: unhandled mode %d, reg %d, data %08X at %08X\n", mode, reg, data, REG_PC);
+	}
+}
+
+static void WRITE_EA_32(int ea, uint32 data)
+{
+	int mode = (ea >> 3) & 0x7;
+	int reg = (ea & 0x7);
+
+	switch (mode)
+	{
+		case 0:		// Dn
+		{
+			REG_D[reg] = data;
+			break;
+		}
+		case 1:		// An
+		{
+			REG_A[reg] = data;
+			break;
+		}
+		case 2:		// (An)
+		{
+			uint32 ea = REG_A[reg];
+			m68ki_write_32(ea, data);
+			break;
+		}
+		case 3:		// (An)+
+		{
+			uint32 ea = EA_AY_PI_32();
+			m68ki_write_32(ea, data);
+			break;
+		}
+		case 4:		// -(An)
+		{
+			uint32 ea = EA_AY_PD_32();
+			m68ki_write_32(ea, data);
+			break;
+		}
+		case 5:		// (d16, An)
+		{
+			uint32 ea = EA_AY_DI_32();
+			m68ki_write_32(ea, data);
+			break;
+		}
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_32();
+			m68ki_write_32(ea, data);
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					m68ki_write_32(ea, data);
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					uint32 ea = EA_PCDI_32();
+					m68ki_write_32(ea, data);
+					break;
+				}
+				default:	fatalerror("MC68040: WRITE_EA_32: unhandled mode %d, reg %d at %08X\n", mode, reg, REG_PC);
+			}
+			break;
+		}
+		default:	fatalerror("MC68040: WRITE_EA_32: unhandled mode %d, reg %d, data %08X at %08X\n", mode, reg, data, REG_PC);
+	}
+}
+
 static void WRITE_EA_64(int ea, uint64 data)
 {
 	int mode = (ea >> 3) & 0x7;
@@ -381,7 +532,7 @@ static void WRITE_EA_64(int ea, uint64 data)
 		{
 			uint32 ea = REG_A[reg];
 			m68ki_write_32(ea, (uint32)(data >> 32));
-			m68ki_write_32(ea, (uint32)(data));
+			m68ki_write_32(ea+4, (uint32)(data));
 			break;
 		}
 		case 4:		// -(An)
@@ -627,7 +778,8 @@ static void fmove_reg_mem(uint16 w2)
 		}
 		case 4:		// Word Integer
 		{
-			fatalerror("fmove_reg_mem: word integer store unimplemented at %08X\n", REG_PC-4);
+			sint16 d = (sint16)(REG_FP[src].f);
+			WRITE_EA_16(ea, d);
 			break;
 		}
 		case 5:		// Double-precision Real
@@ -638,7 +790,8 @@ static void fmove_reg_mem(uint16 w2)
 		}
 		case 6:		// Byte Integer
 		{
-			fatalerror("fmove_reg_mem: byte integer store unimplemented at %08X\n", REG_PC-4);
+			sint8 d = (sint16)(REG_FP[src].f);
+			WRITE_EA_8(ea, d);
 			break;
 		}
 		case 7:		// Packed-decimal Real with Dynamic K-factor

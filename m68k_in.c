@@ -283,6 +283,7 @@ M68KMAKE_OPCODE_HANDLER_HEADER
 #include "m68kcpu.h"
 extern void m68040_fpu_op0(void);
 extern void m68040_fpu_op1(void);
+extern void m68881_mmu_ops();
 
 /* ======================================================================== */
 /* ========================= INSTRUCTION HANDLERS ========================= */
@@ -769,7 +770,7 @@ pack      16  mm    axy7  1000111101001111  ..........  . . U U U   .   .  13  1
 pack      16  mm    .     1000...101001...  ..........  . . U U U   .   .  13  13  13
 pea       32  .     .     0100100001......  A..DXWLdx.  U U U U U   6   6   5   5   5
 pflush    32  .     .     1111010100011000  ..........  . . . . S   .   .   .   .   4   TODO: correct timing
-pmove     32  .     .     1111000000......  A..DXWLdx.  . . S S S   .   .   8   8   8
+pmmu      32  .     .     1111000.........  ..........  . . S S S   .   .   8   8   8
 reset      0  .     .     0100111001110000  ..........  S S S S S   0   0   0   0   0
 ror        8  s     .     1110...000011...  ..........  U U U U U   6   6   8   8   8
 ror       16  s     .     1110...001011...  ..........  U U U U U   6   6   8   8   8
@@ -914,7 +915,7 @@ M68KMAKE_OP(1111, 0, ., .)
 
 M68KMAKE_OP(040fpu0, 32, ., .)
 {
-	if(CPU_TYPE_IS_040_PLUS(CPU_TYPE))
+	if(CPU_TYPE_IS_030_PLUS(CPU_TYPE))
 	{
 		m68040_fpu_op0();
 		return;
@@ -925,7 +926,7 @@ M68KMAKE_OP(040fpu0, 32, ., .)
 
 M68KMAKE_OP(040fpu1, 32, ., .)
 {
-	if(CPU_TYPE_IS_040_PLUS(CPU_TYPE))
+	if(CPU_TYPE_IS_030_PLUS(CPU_TYPE))
 	{
 		m68040_fpu_op1();
 		return;
@@ -8448,28 +8449,21 @@ M68KMAKE_OP(pea, 32, ., .)
 	m68ki_push_32(ea);
 }
 
-
 M68KMAKE_OP(pflush, 32, ., .)
 {
 	if ((CPU_TYPE_IS_EC020_PLUS(CPU_TYPE)) && (HAS_PMMU))
 	{
-		fprintf(stderr,"680x0: unhandled PFLUSH\n");
+		fprintf(stderr,"68040: unhandled PFLUSH\n");
 		return;
 	}
 	m68ki_exception_1111();
 }
 
-M68KMAKE_OP(pmove, 32, ., .)
+M68KMAKE_OP(pmmu, 32, ., .)
 {
-	uint16 modes;
-	uint32 ea;
-
 	if ((CPU_TYPE_IS_EC020_PLUS(CPU_TYPE)) && (HAS_PMMU))
 	{
-		modes = m68ki_read_imm_16();
-		ea = M68KMAKE_GET_EA_AY_32;
-
-		fprintf(stderr,"680x0: unhandled PMOVE modes %x ea %x\n", modes, ea);
+		m68881_mmu_ops();
 	}
 	else
 	{

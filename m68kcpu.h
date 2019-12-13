@@ -3,7 +3,7 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 3.32
+ *                                Version 4.5
  *
  * A portable Motorola M680x0 processor emulation engine.
  * Copyright Karl Stenerud.  All rights reserved.
@@ -172,8 +172,9 @@ extern "C" {
 #define CPU_TYPE_EC030  (0x00000020)
 #define CPU_TYPE_030    (0x00000040)
 #define CPU_TYPE_EC040  (0x00000080)
-#define CPU_TYPE_040    (0x00000100)
-#define CPU_TYPE_SCC070 (0x00000200)
+#define CPU_TYPE_LC040  (0x00000100)
+#define CPU_TYPE_040    (0x00000200)
+#define CPU_TYPE_SCC070 (0x00000400)
 
 /* Different ways to stop the CPU */
 #define STOP_LEVEL_STOP 1
@@ -368,6 +369,7 @@ extern "C" {
 #define CYC_SHIFT        m68ki_cpu.cyc_shift
 #define CYC_RESET        m68ki_cpu.cyc_reset
 #define HAS_PMMU	 m68ki_cpu.has_pmmu
+#define PMMU_ENABLED	 m68ki_cpu.pmmu_enabled
 #define RESET_CYCLES	 m68ki_cpu.reset_cycles
 
 
@@ -946,6 +948,7 @@ typedef struct
 	uint instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
 	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
 	int    has_pmmu;     /* Indicates if a PMMU available (yes on 030, 040, no on EC030) */
+	int    pmmu_enabled; /* Indicates if the PMMU is enabled */
 	uint reset_cycles;
 
 	/* Clocks required for instructions / exceptions */
@@ -962,6 +965,12 @@ typedef struct
 	/* Virtual IRQ lines state */
 	uint virq_state;
 	uint nmi_pending;
+
+	/* PMMU registers */
+	uint mmu_crp_aptr, mmu_crp_limit;
+	uint mmu_srp_aptr, mmu_srp_limit;
+	uint mmu_tc;
+	uint16 mmu_sr;
 
 	const uint8* cyc_instruction;
 	const uint8* cyc_exception;
@@ -1012,6 +1021,8 @@ char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type);
 
 /* ---------------------------- Read Immediate ---------------------------- */
 
+extern uint pmmu_translate_addr(uint addr_in);
+
 /* Handles all immediate reads, does address error check, function code setting,
  * and prefetching if they are enabled in m68kconf.h
  */
@@ -1019,6 +1030,14 @@ static inline uint m68ki_read_imm_16(void)
 {
 	m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_PROGRAM); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error(REG_PC, MODE_READ, FLAG_S | FUNCTION_CODE_USER_PROGRAM); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_SEPARATE_READS
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+#endif
+
 #if M68K_EMULATE_PREFETCH
 {
 	uint result;
@@ -1047,6 +1066,13 @@ static inline uint m68ki_read_imm_8(void)
 
 static inline uint m68ki_read_imm_32(void)
 {
+#if M68K_SEPARATE_READS
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+#endif
+
 #if M68K_EMULATE_PREFETCH
 	uint temp_val;
 
@@ -1077,8 +1103,6 @@ static inline uint m68ki_read_imm_32(void)
 #endif /* M68K_EMULATE_PREFETCH */
 }
 
-
-
 /* ------------------------- Top level read/write ------------------------- */
 
 /* Handles all memory accesses (except for immediate reads if they are
@@ -1091,6 +1115,12 @@ static inline uint m68ki_read_8_fc(uint address, uint fc)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	return m68k_read_memory_8(ADDRESS_68K(address));
 }
 static inline uint m68ki_read_16_fc(uint address, uint fc)
@@ -1098,6 +1128,12 @@ static inline uint m68ki_read_16_fc(uint address, uint fc)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	return m68k_read_memory_16(ADDRESS_68K(address));
 }
 static inline uint m68ki_read_32_fc(uint address, uint fc)
@@ -1105,6 +1141,12 @@ static inline uint m68ki_read_32_fc(uint address, uint fc)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_READ, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	return m68k_read_memory_32(ADDRESS_68K(address));
 }
 
@@ -1112,6 +1154,12 @@ static inline void m68ki_write_8_fc(uint address, uint fc, uint value)
 {
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_8(ADDRESS_68K(address), value);
 }
 static inline void m68ki_write_16_fc(uint address, uint fc, uint value)
@@ -1119,6 +1167,12 @@ static inline void m68ki_write_16_fc(uint address, uint fc, uint value)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_16(ADDRESS_68K(address), value);
 }
 static inline void m68ki_write_32_fc(uint address, uint fc, uint value)
@@ -1126,6 +1180,12 @@ static inline void m68ki_write_32_fc(uint address, uint fc, uint value)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_32(ADDRESS_68K(address), value);
 }
 
@@ -1135,10 +1195,15 @@ static inline void m68ki_write_32_pd_fc(uint address, uint fc, uint value)
 	(void)fc;
 	m68ki_set_fc(fc); /* auto-disable (see m68kcpu.h) */
 	m68ki_check_address_error_010_less(address, MODE_WRITE, fc); /* auto-disable (see m68kcpu.h) */
+
+#if M68K_EMULATE_PMMU
+	if (PMMU_ENABLED)
+	    address = pmmu_translate_addr(address);
+#endif
+
 	m68k_write_memory_32_pd(ADDRESS_68K(address), value);
 }
 #endif
-
 
 /* --------------------- Effective Address Calculation -------------------- */
 
@@ -1416,8 +1481,6 @@ static inline void m68ki_branch_32(uint offset)
 	REG_PC += offset;
 	m68ki_pc_changed(REG_PC);
 }
-
-
 
 /* ---------------------------- Status Register --------------------------- */
 

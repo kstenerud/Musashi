@@ -147,11 +147,23 @@ To enable separate immediate reads:
     unsigned int  m68k_read_immediate_16(unsigned int address);
     unsigned int  m68k_read_immediate_32(unsigned int address);
 
+    Now you also have the pcrelative stuff:
+    unsigned int  m68k_read_pcrelative_8(unsigned int address);
+    unsigned int  m68k_read_pcrelative_16(unsigned int address);
+    unsigned int  m68k_read_pcrelative_32(unsigned int address);
+
 - If you need to know the current PC (for banking and such), set
   M68K_MONITOR_PC to OPT_SPECIFY_HANDLER, and set M68K_SET_PC_CALLBACK(A) to
   your routine.
 
+- In the unlikely case where you need to emulate some PMMU in the immediate
+  reads and/or pcrealtive stuff, you'll need to explicitely call the
+  translation address mechanism from your user functions this way :
 
+    if (PMMU_ENABLED)
+        address = pmmu_translate_addr(address);
+
+  (this is handled automatically by normal memory accesses).
 
 ADDRESS SPACES:
 --------------

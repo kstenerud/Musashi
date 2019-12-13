@@ -3,7 +3,7 @@
 /* ======================================================================== */
 /*
  *                                  MUSASHI
- *                                Version 4.10
+ *                                Version 4.55
  *
  * A portable Motorola M680x0 processor emulation engine.
  * Copyright Karl Stenerud.  All rights reserved.
@@ -40,12 +40,16 @@
 
 extern void m68040_fpu_op0(void);
 extern void m68040_fpu_op1(void);
+extern void m68881_mmu_ops();
 extern unsigned char m68ki_cycles[][0x10000];
 extern void (*m68ki_instruction_jump_table[0x10000])(void); /* opcode handler jump table */
 extern void m68ki_build_opcode_table(void);
 
 #include "m68kops.h"
 #include "m68kcpu.h"
+
+#include "m68kfpu.c"
+#include "m68kmmu.h" // uses some functions from m68kfpu.c which are static !
 
 /* ======================================================================== */
 /* ================================= DATA ================================= */
@@ -599,7 +603,6 @@ static void default_instr_hook_callback(unsigned int pc)
 	jmp_buf m68ki_aerr_trap;
 #endif /* M68K_EMULATE_ADDRESS_ERROR */
 
-
 /* ======================================================================== */
 /* ================================= API ================================== */
 /* ======================================================================== */
@@ -896,6 +899,39 @@ void m68k_set_cpu_type(unsigned int cpu_type)
 			CYC_RESET        = 518;
 			HAS_PMMU	 = 1;
 			return;
+		case M68K_CPU_TYPE_68EC040: // Just a 68040 without pmmu apparently...
+			CPU_TYPE         = CPU_TYPE_EC040;
+			CPU_ADDRESS_MASK = 0xffffffff;
+			CPU_SR_MASK      = 0xf71f; /* T1 T0 S  M  -- I2 I1 I0 -- -- -- X  N  Z  V  C  */
+			CYC_INSTRUCTION  = m68ki_cycles[4];
+			CYC_EXCEPTION    = m68ki_exception_cycle_table[4];
+			CYC_BCC_NOTAKE_B = -2;
+			CYC_BCC_NOTAKE_W = 0;
+			CYC_DBCC_F_NOEXP = 0;
+			CYC_DBCC_F_EXP   = 4;
+			CYC_SCC_R_TRUE   = 0;
+			CYC_MOVEM_W      = 2;
+			CYC_MOVEM_L      = 2;
+			CYC_SHIFT        = 0;
+			CYC_RESET        = 518;
+			HAS_PMMU	 = 0;
+			return;
+		case M68K_CPU_TYPE_68LC040:
+			CPU_TYPE         = CPU_TYPE_LC040;
+			m68ki_cpu.sr_mask          = 0xf71f; /* T1 T0 S  M  -- I2 I1 I0 -- -- -- X  N  Z  V  C  */
+			m68ki_cpu.cyc_instruction  = m68ki_cycles[4];
+			m68ki_cpu.cyc_exception    = m68ki_exception_cycle_table[4];
+			m68ki_cpu.cyc_bcc_notake_b = -2;
+			m68ki_cpu.cyc_bcc_notake_w = 0;
+			m68ki_cpu.cyc_dbcc_f_noexp = 0;
+			m68ki_cpu.cyc_dbcc_f_exp   = 4;
+			m68ki_cpu.cyc_scc_r_true   = 0;
+			m68ki_cpu.cyc_movem_w      = 2;
+			m68ki_cpu.cyc_movem_l      = 2;
+			m68ki_cpu.cyc_shift        = 0;
+			m68ki_cpu.cyc_reset        = 518;
+			HAS_PMMU	       = 1;
+			return;
 	}
 }
 
@@ -1062,6 +1098,9 @@ void m68k_pulse_bus_error(void)
 /* Pulse the RESET line on the CPU */
 void m68k_pulse_reset(void)
 {
+	/* Disable the PMMU on reset */
+	m68ki_cpu.pmmu_enabled = 0;
+
 	/* Clear all stop levels and eat up all remaining cycles */
 	CPU_STOPPED = 0;
 	SET_CYCLES(0);
@@ -1103,7 +1142,6 @@ void m68k_pulse_halt(void)
 {
 	CPU_STOPPED |= STOP_LEVEL_HALT;
 }
-
 
 /* Get and set the current CPU context */
 /* This is to allow for multiple CPUs */
