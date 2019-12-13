@@ -8451,13 +8451,12 @@ M68KMAKE_OP(pea, 32, ., .)
 
 M68KMAKE_OP(pflush, 32, ., .)
 {
-	if ((CPU_TYPE_IS_040_PLUS(CPU_TYPE)) && (HAS_PMMU))
+	if ((CPU_TYPE_IS_EC020_PLUS(CPU_TYPE)) && (HAS_PMMU))
 	{
-		// Nothing to do, unless address translation cache is emulated
 		fprintf(stderr,"680x0: unhandled PFLUSH\n");
 		return;
 	}
-	m68ki_exception_illegal();
+	m68ki_exception_1111();
 }
 
 M68KMAKE_OP(pmove, 32, ., .)
@@ -8465,16 +8464,16 @@ M68KMAKE_OP(pmove, 32, ., .)
 	uint16 modes;
 	uint32 ea;
 
-	modes = m68ki_read_imm_16();
-	ea = M68KMAKE_GET_EA_AY_32;
-
 	if ((CPU_TYPE_IS_EC020_PLUS(CPU_TYPE)) && (HAS_PMMU))
 	{
+		modes = m68ki_read_imm_16();
+		ea = M68KMAKE_GET_EA_AY_32;
+
 		fprintf(stderr,"680x0: unhandled PMOVE modes %x ea %x\n", modes, ea);
 	}
 	else
 	{
-		m68ki_exception_illegal();
+		m68ki_exception_1111();
 	}
 }
 

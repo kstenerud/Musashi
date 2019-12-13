@@ -368,6 +368,7 @@ extern "C" {
 #define CYC_SHIFT        m68ki_cpu.cyc_shift
 #define CYC_RESET        m68ki_cpu.cyc_reset
 #define HAS_PMMU	 m68ki_cpu.has_pmmu
+#define RESET_CYCLES	 m68ki_cpu.reset_cycles
 
 
 #define CALLBACK_INT_ACK     m68ki_cpu.int_ack_callback
@@ -945,6 +946,7 @@ typedef struct
 	uint instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
 	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
 	int    has_pmmu;     /* Indicates if a PMMU available (yes on 030, 040, no on EC030) */
+	uint reset_cycles;
 
 	/* Clocks required for instructions / exceptions */
 	uint cyc_bcc_notake_b;
@@ -981,7 +983,6 @@ typedef struct
 
 extern m68ki_cpu_core m68ki_cpu;
 extern sint           m68ki_remaining_cycles;
-extern uint	      m68ki_reset_cycles;
 extern uint           m68ki_tracing;
 extern const uint8    m68ki_shift_8_table[];
 extern const uint16   m68ki_shift_16_table[];
