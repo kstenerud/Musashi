@@ -1,5 +1,16 @@
 #include <math.h>
-#include "m68kcpu.h"
+#include <stdio.h>
+#include <stdarg.h>
+
+extern void exit(int);
+
+static void fatalerror(char *format, ...) {
+      va_list ap;
+      va_start(ap,format);
+      fprintf(stderr,format,ap);
+      va_end(ap);
+      exit(1);
+}
 
 #define FPCC_N			0x08000000
 #define FPCC_Z			0x04000000

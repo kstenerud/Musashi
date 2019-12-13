@@ -1020,7 +1020,7 @@ char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type);
 
 /* ---------------------------- Read Immediate ---------------------------- */
 
-#include "m68kmmu.h"
+extern uint pmmu_translate_addr(uint addr_in);
 
 /* Handles all immediate reads, does address error check, function code setting,
  * and prefetching if they are enabled in m68kconf.h
@@ -1203,7 +1203,6 @@ static inline void m68ki_write_32_pd_fc(uint address, uint fc, uint value)
 	m68k_write_memory_32_pd(ADDRESS_68K(address), value);
 }
 #endif
-
 
 /* --------------------- Effective Address Calculation -------------------- */
 
@@ -1481,8 +1480,6 @@ static inline void m68ki_branch_32(uint offset)
 	REG_PC += offset;
 	m68ki_pc_changed(REG_PC);
 }
-
-
 
 /* ---------------------------- Status Register --------------------------- */
 

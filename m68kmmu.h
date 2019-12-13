@@ -6,24 +6,11 @@
     Copyright Nicola Salmoria and the MAME Team.
     Visit http://mamedev.org for licensing and usage restrictions.
 */
-#include <stdio.h>
-#include <stdarg.h>
-
-extern void exit(int);
-
-// TODO: Remove this and replace with a non-fatal signaling mechanism
-inline void fatalerror(char *format, ...) {
-      va_list ap;
-      va_start(ap,format);
-      fprintf(stderr,format,ap);
-      va_end(ap);
-      exit(1);
-}
 
 /*
 	pmmu_translate_addr: perform 68851/68030-style PMMU address translation
 */
-inline uint pmmu_translate_addr(uint addr_in)
+uint pmmu_translate_addr(uint addr_in)
 {
 	uint32 addr_out, tbl_entry = 0, tbl_entry2, tamode = 0, tbmode = 0, tcmode = 0;
 	uint root_aptr, root_limit, tofs, is, abits, bbits, cbits;
@@ -186,48 +173,149 @@ inline uint pmmu_translate_addr(uint addr_in)
 
 /*
 
-maincpu at 40804366: called unimplemented instruction f000 (cpgen)
-PMMU: tcr 80f05570 limit 7fff0003 aptr 043ffcc0 is 0
-PMMU: reading table A entries at 043ffce0
-PMMU: addr 4080438a entry 00000000 entry2 7ffffc18 mode 0 aofs 20
-680x0 PMMU: Unhandled Table A mode 0
-
-enable, PS = f
-
-tblA @ 043ffcc0:
-
-043ffcc0 0001fc0a 043ffcb0  =>  00000019 04000019
-043ffcc8 7ffffc18 00000000
-043ffcd0 7ffffc18 00000000
-043ffcd8 7ffffc18 00000000
-043ffce0 7ffffc18 00000000
-043ffce8 7ffffc18 00000000
-043ffcf0 7ffffc18 00000000
-043ffcf8 7ffffc18 00000000
-043ffd00 7ffffc19 40000000
-043ffd08 7ffffc19 48000000
-043ffd10 7ffffc59 50000000
-043ffd18 7ffffc59 58000000
-043ffd20 7ffffc59 60000000
-043ffd28 7ffffc59 68000000
-043ffd30 7ffffc59 70000000
-043ffd38 7ffffc59 78000000
-043ffd40 7ffffc59 80000000
-043ffd48 7ffffc59 88000000
-043ffd50 7ffffc59 90000000
-043ffd58 7ffffc59 98000000
-043ffd60 7ffffc59 a0000000
-043ffd68 7ffffc59 a8000000
-043ffd70 7ffffc59 b0000000
-043ffd78 7ffffc59 b8000000
-043ffd80 7ffffc59 c0000000
-043ffd88 7ffffc59 c8000000
-043ffd90 7ffffc59 d0000000
-043ffd98 7ffffc59 d8000000
-043ffda0 7ffffc59 e0000000
-043ffda8 7ffffc59 e8000000
-043ffdb0 7ffffc59 f0000000
-043ffdb8 7ffffc59 f8000000
+	m68881_mmu_ops: COP 0 MMU opcode handling
 
 */
+
+void m68881_mmu_ops()
+{
+	uint16 modes;
+	uint32 ea = m68ki_cpu.ir & 0x3f;
+	uint64 temp64;
+
+	// catch the 2 "weird" encodings up front (PBcc)
+	if ((m68ki_cpu.ir & 0xffc0) == 0xf0c0)
+	{
+		fprintf(stderr,"680x0: unhandled PBcc\n");
+		return;
+	}
+	else if ((m68ki_cpu.ir & 0xffc0) == 0xf080)
+	{
+		fprintf(stderr,"680x0: unhandled PBcc\n");
+		return;
+	}
+	else	// the rest are 1111000xxxXXXXXX where xxx is the instruction family
+	{
+		switch ((m68ki_cpu.ir>>9) & 0x7)
+		{
+			case 0:
+				modes = OPER_I_16();
+
+				if ((modes & 0xfde0) == 0x2000)	// PLOAD
+				{
+					fprintf(stderr,"680x0: unhandled PLOAD\n");
+					return;
+				}
+				else if ((modes & 0xe200) == 0x2000)	// PFLUSH
+				{
+					fprintf(stderr,"680x0: unhandled PFLUSH PC=%x\n", REG_PC);
+					return;
+				}
+				else if (modes == 0xa000)	// PFLUSHR
+				{
+					fprintf(stderr,"680x0: unhandled PFLUSHR\n");
+					return;
+				}
+				else if (modes == 0x2800)	// PVALID (FORMAT 1)
+				{
+					fprintf(stderr,"680x0: unhandled PVALID1\n");
+					return;
+				}
+				else if ((modes & 0xfff8) == 0x2c00)	// PVALID (FORMAT 2)
+				{
+					fprintf(stderr,"680x0: unhandled PVALID2\n");
+					return;
+				}
+				else if ((modes & 0xe000) == 0x8000)	// PTEST
+				{
+					fprintf(stderr,"680x0: unhandled PTEST\n");
+					return;
+				}
+				else
+				{
+					switch ((modes>>13) & 0x7)
+					{
+						case 0:	// MC68030/040 form with FD bit
+						case 2:	// MC68881 form, FD never set
+							if (modes & 0x200)
+							{
+							 	switch ((modes>>10) & 7)
+								{
+									case 0:	// translation control register
+										WRITE_EA_32(ea, m68ki_cpu.mmu_tc);
+										break;
+
+									case 2: // supervisor root pointer
+										WRITE_EA_64(ea, (uint64)m68ki_cpu.mmu_srp_limit<<32 | (uint64)m68ki_cpu.mmu_srp_aptr);
+										break;
+
+									case 3: // CPU root pointer
+										WRITE_EA_64(ea, (uint64)m68ki_cpu.mmu_crp_limit<<32 | (uint64)m68ki_cpu.mmu_crp_aptr);
+										break;
+
+									default:
+										fprintf(stderr,"680x0: PMOVE from unknown MMU register %x, PC %x\n", (modes>>10) & 7, REG_PC);
+										break;
+								}
+							}
+							else
+							{
+							 	switch ((modes>>10) & 7)
+								{
+									case 0:	// translation control register
+										m68ki_cpu.mmu_tc = READ_EA_32(ea);
+
+										if (m68ki_cpu.mmu_tc & 0x80000000)
+										{
+											m68ki_cpu.pmmu_enabled = 1;
+										}
+										else
+										{
+											m68ki_cpu.pmmu_enabled = 0;
+										}
+										break;
+
+									case 2:	// supervisor root pointer
+										temp64 = READ_EA_64(ea);
+										m68ki_cpu.mmu_srp_limit = (temp64>>32) & 0xffffffff;
+										m68ki_cpu.mmu_srp_aptr = temp64 & 0xffffffff;
+										break;
+
+									case 3:	// CPU root pointer
+										temp64 = READ_EA_64(ea);
+										m68ki_cpu.mmu_crp_limit = (temp64>>32) & 0xffffffff;
+										m68ki_cpu.mmu_crp_aptr = temp64 & 0xffffffff;
+										break;
+
+									default:
+										fprintf(stderr,"680x0: PMOVE to unknown MMU register %x, PC %x\n", (modes>>10) & 7, REG_PC);
+										break;
+								}
+							}
+							break;
+
+						case 3:	// MC68030 to/from status reg
+							if (modes & 0x200)
+							{
+								WRITE_EA_32(ea, m68ki_cpu.mmu_sr);
+							}
+							else
+							{
+								m68ki_cpu.mmu_sr = READ_EA_32(ea);
+							}
+							break;
+
+						default:
+							fprintf(stderr,"680x0: unknown PMOVE mode %x (modes %04x) (PC %x)\n", (modes>>13) & 0x7, modes, REG_PC);
+							break;
+					}
+				}
+				break;
+
+			default:
+				fprintf(stderr,"680x0: unknown PMMU instruction group %d\n", (m68ki_cpu.ir>>9) & 0x7);
+				break;
+		}
+	}
+}
 
