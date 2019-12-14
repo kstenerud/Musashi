@@ -25,7 +25,7 @@ all: $(.OFILES)
 clean:
 	rm -f $(DELETEFILES)
 
-m68kcpu.o: $(MUSASHIGENHFILES)
+m68kcpu.o: $(MUSASHIGENHFILES) m68kfpu.c m68kmmu.h softfloat/softfloat.c softfloat/softfloat.h
 
 $(MUSASHIGENCFILES) $(MUSASHIGENHFILES): $(MUSASHIGENERATOR)$(EXE)
 	$(EXEPATH)$(MUSASHIGENERATOR)$(EXE)
