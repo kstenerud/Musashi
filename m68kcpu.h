@@ -38,6 +38,7 @@ extern "C" {
 #endif
 
 #include "m68k.h"
+
 #include <limits.h>
 
 #include <setjmp.h>
@@ -65,26 +66,37 @@ extern "C" {
 #undef sint
 #undef uint
 
-#define sint8  signed   char			/* ASG: changed from char to signed char */
-#define sint16 signed   short
-#define sint32 signed   int			/* AWJ: changed from long to int */
-#define uint8  unsigned char
-#define uint16 unsigned short
-#define uint32 unsigned int			/* AWJ: changed from long to int */
+typedef signed   char  sint8;  		/* ASG: changed from char to signed char */
+typedef signed   short sint16;
+typedef signed   int   sint32; 		/* AWJ: changed from long to int */
+typedef unsigned char  uint8;
+typedef unsigned short uint16;
+typedef unsigned int   uint32; 			/* AWJ: changed from long to int */
 
 /* signed and unsigned int must be at least 32 bits wide */
-#define sint   signed   int
-#define uint   unsigned int
+typedef signed   int sint;
+typedef unsigned int uint;
 
 
 #if M68K_USE_64_BIT
-#define sint64 signed   long long
-#define uint64 unsigned long long
+typedef signed   long long sint64;
+typedef unsigned long long uint64;
 #else
-#define sint64 sint32
-#define uint64 uint32
+typedef sint32 sint64;
+typedef uint32 uint64;
 #endif /* M68K_USE_64_BIT */
 
+/* U64 and S64 are used to wrap long integer constants. */
+#ifdef __GNUC__
+#define U64(val) val##ULL
+#define S64(val) val##LL
+#else
+#define U64(val) val
+#define S64(val) val
+#endif
+
+#include "softfloat/milieu.h"
+#include "softfloat/softfloat.h"
 
 
 /* Allow for architectures that don't have 8-bit sizes */
@@ -925,7 +937,7 @@ typedef struct
 	uint cacr;         /* Cache Control Register (m68020, unemulated) */
 	uint caar;         /* Cache Address Register (m68020, unemulated) */
 	uint ir;           /* Instruction Register */
-    fp_reg fpr[8];     /* FPU Data Register (m68040) */
+	floatx80 fpr[8];     /* FPU Data Register (m68030/040) */
 	uint fpiar;        /* FPU Instruction Address Register (m68040) */
 	uint fpsr;         /* FPU Status Register (m68040) */
 	uint fpcr;         /* FPU Control Register (m68040) */
@@ -949,6 +961,7 @@ typedef struct
 	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
 	int    has_pmmu;     /* Indicates if a PMMU available (yes on 030, 040, no on EC030) */
 	int    pmmu_enabled; /* Indicates if the PMMU is enabled */
+	int    fpu_just_reset; /* Indicates the FPU was just reset */
 	uint reset_cycles;
 
 	/* Clocks required for instructions / exceptions */
