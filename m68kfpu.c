@@ -1207,14 +1207,13 @@ static void fpgen_rm_reg(uint16 w2)
 		}
 		case 0x1e:		// FGETEXP
 		{
-			floatx80 temp = source;
-			sint16 temp2;
-
-			temp2 = source.high;	// get the exponent
-			temp2 -= 0x3fff;	// take off the bias
-			REG_FP[dst] = double_to_fx80((double)temp2);
+			sint16 temp;
+			temp = source.high;	// get the exponent
+			temp -= 0x3fff;	// take off the bias
+			REG_FP[dst] = double_to_fx80((double)temp);
 			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(6);
+			break;
 		}
 		case 0x20:		// FDIV
 		{

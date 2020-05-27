@@ -148,7 +148,7 @@ static int64 roundAndPackInt64( flag zSign, bits64 absZ0, bits64 absZ1 )
 		float_raise( float_flag_invalid );
 		return
 				zSign ? (sbits64) LIT64( 0x8000000000000000 )
-			: LIT64( 0x7FFFFFFFFFFFFFFF );
+			: (sbits64) LIT64( 0x7FFFFFFFFFFFFFFF );
 	}
 	if ( absZ1 ) float_exception_flags |= float_flag_inexact;
 	return z;
@@ -584,7 +584,7 @@ static void
 	}
 	if ( roundBits ) float_exception_flags |= float_flag_inexact;
 	zSig0 += roundIncrement;
-	if ( zSig0 < roundIncrement ) {
+	if ( zSig0 < (bits64)roundIncrement ) {
 		++zExp;
 		zSig0 = LIT64( 0x8000000000000000 );
 	}

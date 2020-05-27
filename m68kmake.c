@@ -1217,7 +1217,7 @@ int main(int argc, char **argv)
 {
 	/* File stuff */
 	char output_path[M68K_MAX_DIR] = "";
-	char filename[M68K_MAX_PATH];
+	char filename[M68K_MAX_PATH*2];
 	/* Section identifier */
 	char section_id[MAX_LINE_LENGTH+1];
 	/* Inserts */
