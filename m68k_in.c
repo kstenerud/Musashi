@@ -3714,7 +3714,7 @@ M68KMAKE_OP(chk2cmp2, 16, ., .)
 			compare = (int32)(int16)compare;
  		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
-    FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
+        FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
 
 		if(COND_CS() && BIT_B(word2))
 				m68ki_exception_trap(EXCEPTION_CHK);
@@ -3781,7 +3781,7 @@ M68KMAKE_OP(chk2cmp2, 32, ., .)
 
 		FLAG_Z = !((upper_bound==compare) || (lower_bound==compare));  // JFF: | => ||
 
-    FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
+        FLAG_C = (lower_bound <= upper_bound ? compare < lower_bound || compare > upper_bound : compare > upper_bound || compare < lower_bound) << 8;
     
 		if(COND_CS() && BIT_B(word2))
 				m68ki_exception_trap(EXCEPTION_CHK);
@@ -4363,8 +4363,8 @@ M68KMAKE_OP(cptrapcc, 32, ., .)
 		M68K_DO_LOG((M68K_LOG_FILEHANDLE "%s at %08x: called unimplemented instruction %04x (%s)\n",
 					 m68ki_cpu_names[CPU_TYPE], ADDRESS_68K(REG_PC - 2), REG_IR,
 					 m68k_disassemble_quick(ADDRESS_68K(REG_PC - 2))));
-    // JFF: unsupported, but at least if the trap doesn't occur, app should still work, so at least PC increase is correct
-    REG_PC += 4;  
+        // JFF: unsupported, but at least if the trap doesn't occur, app should still work, so at least PC increase is correct
+        REG_PC += 4;  
 		return;
 	}
 	m68ki_exception_1111();
