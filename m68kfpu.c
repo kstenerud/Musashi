@@ -1484,18 +1484,32 @@ static void fscc()
   int condition = OPER_I_16() & 0x3f;
 
   int cc = TEST_CONDITION(condition);
+  int mode = (REG_IR & 0x38) >> 3;
+  int v = (cc ? 0xff : 0x00);
   
-  if ((REG_IR & 0x38) == 0)
+  switch (mode)
+  {
+  case 0:  // fscc Dx
     {
       // If the specified floating-point condition is true, sets the byte integer operand at
       // the destination to TRUE (all ones); otherwise, sets the byte to FALSE (all zeros).
       
-      REG_D[REG_IR & 7] = (REG_D[REG_IR & 7] & 0xFFFFFF00) | (cc ? 0xff : 0x00);
+      REG_D[REG_IR & 7] = (REG_D[REG_IR & 7] & 0xFFFFFF00) | v;
+      break;
     }
-  else
+    case 5: // (disp,Ax)
     {
-      // unimplemented
-      fatalerror("040fpu0: fscc: memory not implemented at %08X\n", REG_PC-4);
+    int reg = REG_IR & 7;
+    uint32 ea = REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16());
+    m68ki_write_8(ea,v);
+    break;
+    }
+    
+  default:
+    {
+      // unimplemented see fpu_uae.cpp around line 1300
+      fatalerror("040fpu0: fscc: mode %d not implemented at %08X\n", mode, REG_PC-4);
+    }
     }
   USE_CYCLES(7);  // JFF unsure of the number of cycles!!
 }
