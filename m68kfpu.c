@@ -7,7 +7,7 @@ extern void exit(int);
 static void fatalerror(char *format, ...) {
       va_list ap;
       va_start(ap,format);
-      fprintf(stderr,format,ap);
+      vfprintf(stderr,format,ap);  // JFF: fixed. Was using fprintf and arguments were wrong
       va_end(ap);
       exit(1);
 }
@@ -594,11 +594,9 @@ static uint64 READ_EA_64(int ea)
 }
 
 
-static floatx80 READ_EA_FPE(int ea)
+static floatx80 READ_EA_FPE(int mode, int reg, uint32 di_mode_ea)
 {
 	floatx80 fpr;
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
 
 	switch (mode)
 	{
@@ -616,7 +614,12 @@ static floatx80 READ_EA_FPE(int ea)
 			fpr = load_extended_float80(ea);
 			break;
 		}
+      case 5:		// (d16, An)  (added by JFF)
+		{
+		  fpr = load_extended_float80(di_mode_ea);
+	  	break;
 
+		}
 		case 7:	// extended modes
 		{
 			switch (reg)
@@ -634,7 +637,13 @@ static floatx80 READ_EA_FPE(int ea)
 						fpr = load_extended_float80(ea);
 					}
 					break;
-
+	      		case 4: // immediate (JFF)
+				{
+				  uint32 ea = REG_PC;
+				  fpr = load_extended_float80(ea);
+				  REG_PC += 12;
+				}
+				break;
 				default:
 					fatalerror("M68kFPU: READ_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
 					break;
@@ -938,10 +947,9 @@ static void WRITE_EA_64(int ea, uint64 data)
 	}
 }
 
-static void WRITE_EA_FPE(int ea, floatx80 fpr)
+static void WRITE_EA_FPE(int mode, int reg, floatx80 fpr, uint32 di_mode_ea)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+
 
 	switch (mode)
 	{
@@ -970,7 +978,15 @@ static void WRITE_EA_FPE(int ea, floatx80 fpr)
 			store_extended_float80(ea, fpr);
 			break;
 		}
+    	  case 5:		// (d16, An)  (added by JFF)
+		{
+		  // EA_AY_DI_32() should not be done here because fmovem would increase
+		  // PC each time, reading incorrect displacement & advancing PC too much
+		  // uint32 ea = EA_AY_DI_32();
+		  store_extended_float80(di_mode_ea, fpr);
+	 	 break;
 
+		}
 		case 7:
 		{
 			switch (reg)
@@ -1058,8 +1074,11 @@ static void fpgen_rm_reg(uint16 w2)
 			}
 			case 2:		// Extended-precision Real
 			{
-				source = READ_EA_FPE(ea);
-				break;
+	  	    	int imode = (ea >> 3) & 0x7;
+	  	    	int reg = (ea & 0x7);
+		      	uint32 di_mode_ea = imode == 5 ? (REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16())) : 0;
+		      	source = READ_EA_FPE(imode,reg,di_mode_ea);
+			  	break;
 			}
 			case 3:		// Packed-decimal Real
 			{
@@ -1147,6 +1166,7 @@ static void fpgen_rm_reg(uint16 w2)
 
 				// handle it right here, the usual opmode bits aren't valid in the FMOVECR case
 				REG_FP[dst] = source;
+	     		SET_CONDITION_CODES(REG_FP[dst]); // JFF when destination is a register, we HAVE to update FPCR
 				USE_CYCLES(4);
 				return;
 			}
@@ -1165,6 +1185,7 @@ static void fpgen_rm_reg(uint16 w2)
 		case 0x00:		// FMOVE
 		{
 			REG_FP[dst] = source;
+		    SET_CONDITION_CODES(REG_FP[dst]);  // JFF needs update condition codes
 			USE_CYCLES(4);
 			break;
 		}
@@ -1173,6 +1194,7 @@ static void fpgen_rm_reg(uint16 w2)
 			sint32 temp;
 			temp = floatx80_to_int32(source);
 			REG_FP[dst] = int32_to_floatx80(temp);
+	  		SET_CONDITION_CODES(REG_FP[dst]);  // JFF needs update condition codes
 			break;
 		}
 		case 0x03:		// FsintRZ
@@ -1180,6 +1202,7 @@ static void fpgen_rm_reg(uint16 w2)
 			sint32 temp;
 			temp = floatx80_to_int32_round_to_zero(source);
 			REG_FP[dst] = int32_to_floatx80(temp);
+			SET_CONDITION_CODES(REG_FP[dst]);  // JFF needs update condition codes
 			break;
 		}
 		case 0x04:		// FSQRT
@@ -1215,9 +1238,11 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(6);
 			break;
 		}
+  	    case 0x60:		// FSDIVS (JFF) (source has already been converted to floatx80)
 		case 0x20:		// FDIV
 		{
 			REG_FP[dst] = floatx80_div(REG_FP[dst], source);
+		    SET_CONDITION_CODES(REG_FP[dst]); // JFF
 			USE_CYCLES(43);
 			break;
 		}
@@ -1228,6 +1253,7 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(9);
 			break;
 		}
+   		case 0x63:		// FSMULS (JFF) (source has already been converted to floatx80)
 		case 0x23:		// FMUL
 		{
 			REG_FP[dst] = floatx80_mul(REG_FP[dst], source);
@@ -1293,7 +1319,10 @@ static void fmove_reg_mem(uint16 w2)
 		}
 		case 2:		// Extended-precision Real
 		{
-		 	WRITE_EA_FPE(ea, REG_FP[src]);
+		  	int mode = (ea >> 3) & 0x7;
+		  	int reg = (ea & 0x7);
+		  	uint32 di_mode_ea = mode == 5 ? (REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16())) : 0;
+			WRITE_EA_FPE(mode, reg, REG_FP[src], di_mode_ea);
 			break;
 		}
 		case 3:		// Packed-decimal Real with Static K-factor
@@ -1346,7 +1375,12 @@ static void fmove_fpcr(uint16 w2)
 	}
 	else		// From <ea> to system control reg
 	{
-		if (reg & 4) REG_FPCR = READ_EA_32(ea);
+      if (reg & 4) 
+		{
+		  REG_FPCR = READ_EA_32(ea);
+		  // JFF: need to update rounding mode from softfloat module
+		  float_rounding_mode = (REG_FPCR >> 4) & 0x3;
+		}
 		if (reg & 2) REG_FPSR = READ_EA_32(ea);
 		if (reg & 1) REG_FPIAR = READ_EA_32(ea);
 	}
@@ -1365,15 +1399,47 @@ static void fmovem(uint16 w2)
 	if (dir)	// From FP regs to mem
 	{
 		switch (mode)
-		{
+	{
+	  	case 2:		// (JFF): Static register list, postincrement or control addressing mode.     
+	    {
+	      int imode = (ea >> 3) & 0x7;
+	      int reg = (ea & 0x7);
+	      int di_mode = imode == 5;	      
+	      uint32 di_mode_ea = di_mode ? (REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16())) : 0;
+	      for (i=0; i < 8; i++)
+			{
+			  if (reglist & (1 << i))
+			    {
+			      WRITE_EA_FPE(imode,reg, REG_FP[7-i],di_mode_ea);
+			      USE_CYCLES(2);
+			      if (di_mode)
+				{
+				  di_mode_ea += 12;
+				}
+		    	}
+			}
+	      break;
+	   	 }
 			case 0:		// Static register list, predecrement addressing mode
 			{
+	      int imode = (ea >> 3) & 0x7;
+	      int reg = (ea & 0x7);
+	      // the "di_mode_ea" parameter kludge is required here else WRITE_EA_FPE would have
+	      // to call EA_AY_DI_32() (that advances PC & reads displacement) each time
+	      // when the proper behaviour is 1) read once, 2) increment ea for each matching register
+	      // this forces to pre-read the mode (named "imode") so we can decide to read displacement, only once
+	      int di_mode = imode == 5;	      
+	      uint32 di_mode_ea =  di_mode ? (REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16())) : 0;
 				for (i=0; i < 8; i++)
 				{
 					if (reglist & (1 << i))
 					{
-						WRITE_EA_FPE(ea, REG_FP[i]);
+		 			    WRITE_EA_FPE(imode,reg, REG_FP[i],di_mode_ea);
 						USE_CYCLES(2);
+					    if (di_mode)
+						{
+						  di_mode_ea += 12;
+						}
 					}
 				}
 				break;
@@ -1388,12 +1454,20 @@ static void fmovem(uint16 w2)
 		{
 			case 2:		// Static register list, postincrement addressing mode
 			{
+		      int imode = (ea >> 3) & 0x7;
+		      int reg = (ea & 0x7);
+		      int di_mode = imode == 5;	    
+		      uint32 di_mode_ea = di_mode ? (REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16())) : 0;
 				for (i=0; i < 8; i++)
 				{
 					if (reglist & (1 << i))
 					{
-						REG_FP[7-i] = READ_EA_FPE(ea);
+		   			   	REG_FP[7-i] = READ_EA_FPE(imode,reg,di_mode_ea);
 						USE_CYCLES(2);
+					    if (di_mode)
+						{
+						  di_mode_ea += 12;
+						}
 					}
 				}
 				break;
@@ -1404,6 +1478,41 @@ static void fmovem(uint16 w2)
 	}
 }
 
+static void fscc()
+{
+  // added by JFF, this seems to work properly now 
+  int condition = OPER_I_16() & 0x3f;
+
+  int cc = TEST_CONDITION(condition);
+  int mode = (REG_IR & 0x38) >> 3;
+  int v = (cc ? 0xff : 0x00);
+  
+  switch (mode)
+  {
+  case 0:  // fscc Dx
+    {
+      // If the specified floating-point condition is true, sets the byte integer operand at
+      // the destination to TRUE (all ones); otherwise, sets the byte to FALSE (all zeros).
+      
+      REG_D[REG_IR & 7] = (REG_D[REG_IR & 7] & 0xFFFFFF00) | v;
+      break;
+    }
+    case 5: // (disp,Ax)
+    {
+    int reg = REG_IR & 7;
+    uint32 ea = REG_A[reg]+MAKE_INT_16(m68ki_read_imm_16());
+    m68ki_write_8(ea,v);
+    break;
+    }
+    
+  default:
+    {
+      // unimplemented see fpu_uae.cpp around line 1300
+      fatalerror("040fpu0: fscc: mode %d not implemented at %08X\n", mode, REG_PC-4);
+    }
+    }
+  USE_CYCLES(7);  // JFF unsure of the number of cycles!!
+}
 static void fbcc16(void)
 {
 	sint32 offset;
@@ -1482,6 +1591,11 @@ void m68040_fpu_op0()
 			break;
 		}
 
+	    case 1:           // FScc (JFF)
+		{
+		  fscc();
+		  break;
+		}
 		case 2:		// FBcc disp16
 		{
 			fbcc16();
@@ -1493,7 +1607,7 @@ void m68040_fpu_op0()
 			break;
 		}
 
-		default:	fatalerror("M68kFPU: unimplemented main op %d\n", (m68ki_cpu.ir >> 6)	& 0x3);
+      default:	fatalerror("M68kFPU: unimplemented main op %d at %08X\n", (m68ki_cpu.ir >> 6) & 0x3,  REG_PC-4);
 	}
 }
 
