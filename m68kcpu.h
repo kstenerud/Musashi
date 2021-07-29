@@ -198,8 +198,9 @@ typedef uint32 uint64;
 #define MODE_READ       0x10
 #define MODE_WRITE      0
 
-#define RUN_MODE_NORMAL          0
-#define RUN_MODE_BERR_AERR_RESET 1
+#define RUN_MODE_NORMAL              0
+#define RUN_MODE_BERR_AERR_RESET_WSF 1 /* writing stack frame */
+#define RUN_MODE_BERR_AERR_RESET     2 /* stack frame done */
 
 #ifndef NULL
 #define NULL ((void*)0)
@@ -1916,16 +1917,16 @@ static inline void m68ki_exception_bus_error(void)
 	int i;
 
 	/* If we were processing a bus error, address error, or reset,
-	 * this is a catastrophic failure.
+	 * while writing the stack frame, this is a catastrophic failure.
 	 * Halt the CPU
 	 */
-	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET)
+	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET_WSF)
 	{
-m68k_read_memory_8(0x00ffff01);
+		m68k_read_memory_8(0x00ffff01);
 		CPU_STOPPED = STOP_LEVEL_HALT;
 		return;
 	}
-	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
+	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET_WSF;
 
 	/* Use up some clock cycles and undo the instruction's cycles */
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_BUS_ERROR] - CYC_INSTRUCTION[REG_IR]);
@@ -1935,9 +1936,14 @@ m68k_read_memory_8(0x00ffff01);
 	}
 
 	uint sr = m68ki_init_exception();
+
+	/* Note: This is implemented for 68010 only! */
 	m68ki_stack_frame_1000(REG_PPC, sr, EXCEPTION_BUS_ERROR);
 
 	m68ki_jump_vector(EXCEPTION_BUS_ERROR);
+
+	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
+
 	longjmp(m68ki_bus_error_jmp_buf, 1);
 }
 
@@ -2028,21 +2034,23 @@ static inline void m68ki_exception_address_error(void)
 	uint sr = m68ki_init_exception();
 
 	/* If we were processing a bus error, address error, or reset,
-	 * this is a catastrophic failure.
+	 * while writing the stack frame, this is a catastrophic failure.
 	 * Halt the CPU
 	 */
-	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET)
+	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET_WSF)
 	{
-m68k_read_memory_8(0x00ffff01);
+		m68k_read_memory_8(0x00ffff01);
 		CPU_STOPPED = STOP_LEVEL_HALT;
 		return;
 	}
-	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
+	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET_WSF;
 
 	/* Note: This is implemented for 68000 only! */
 	m68ki_stack_frame_buserr(sr);
 
 	m68ki_jump_vector(EXCEPTION_ADDRESS_ERROR);
+
+	CPU_RUN_MODE = RUN_MODE_BERR_AERR_RESET;
 
 	/* Use up some clock cycles. Note that we don't need to undo the
 	instruction's cycles here as we've longjmp:ed directly from the
