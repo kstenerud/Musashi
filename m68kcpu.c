@@ -66,12 +66,14 @@ const char *const m68ki_cpu_names[] =
 	"Invalid CPU",
 	"M68000",
 	"M68010",
-	"Invalid CPU",
-	"M68EC020"
-	"Invalid CPU",
-	"Invalid CPU",
-	"Invalid CPU",
-	"M68020"
+	"M68EC020",
+	"M68020",
+	"M68EC030",
+	"M68030",
+	"M68EC040",
+	"M68LC040",
+	"M68040",
+	"SCC68070",
 };
 #endif /* M68K_LOG_ENABLE */
 
