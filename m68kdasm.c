@@ -239,7 +239,7 @@ static const char *const g_cpcc[64] =
 {/* 000    001    010    011    100    101    110    111 */
 	  "f",  "eq", "ogt", "oge", "olt", "ole", "ogl",  "or", /* 000 */
 	 "un", "ueq", "ugt", "uge", "ult", "ule",  "ne",   "t", /* 001 */
-	 "sf", "seq",  "gt",  "ge",  "lt",  "le",  "gl"  "gle", /* 010 */
+	 "sf", "seq",  "gt",  "ge",  "lt",  "le",  "gl",  "gle", /* 010 */
   "ngle", "ngl", "nle", "nlt", "nge", "ngt", "sne",  "st", /* 011 */
 	  "?",   "?",   "?",   "?",   "?",   "?",   "?",   "?", /* 100 */
 	  "?",   "?",   "?",   "?",   "?",   "?",   "?",   "?", /* 101 */
