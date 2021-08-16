@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "m68k.h"
+#include "m68kcpu.h"
 
 #ifndef uint32
 #define uint32 uint
@@ -2086,8 +2087,8 @@ static void d68000_move_to_usp(void)
 static void d68010_movec(void)
 {
 	uint extension;
-	char* reg_name;
-	char* processor;
+	const char* reg_name;
+	const char* processor;
 	LIMIT_CPU_TYPES(M68010_PLUS);
 	extension = read_imm_16();
 
