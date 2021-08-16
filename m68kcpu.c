@@ -55,13 +55,13 @@ extern void m68ki_build_opcode_table(void);
 /* ================================= DATA ================================= */
 /* ======================================================================== */
 
-int  m68ki_initial_cycles;
+static int  m68ki_initial_cycles;
 int  m68ki_remaining_cycles = 0;                     /* Number of clocks remaining */
 uint m68ki_tracing = 0;
 uint m68ki_address_space;
 
 #ifdef M68K_LOG_ENABLE
-const char *const m68ki_cpu_names[] =
+static const char *const m68ki_cpu_names[] =
 {
 	"Invalid CPU",
 	"M68000",
