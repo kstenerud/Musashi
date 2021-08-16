@@ -218,8 +218,8 @@ typedef struct
 
 
 /* Function Prototypes */
-void error_exit(char* fmt, ...);
-void perror_exit(char* fmt, ...);
+void error_exit(const char* fmt, ...);
+void perror_exit(const char* fmt, ...);
 int check_strsncpy(char* dst, char* src, int maxlength);
 int check_atoi(char* str, int *result);
 int skip_spaces(char* str);
@@ -469,7 +469,7 @@ const int g_clr_cycle_table[13][3] =
 /* ======================================================================== */
 
 /* Print an error message and exit with status error */
-void error_exit(char* fmt, ...)
+void error_exit(const char* fmt, ...)
 {
 	va_list args;
 	fprintf(stderr, "In %s, near or on line %d:\n\t", g_input_filename, g_line_number);
@@ -486,7 +486,7 @@ void error_exit(char* fmt, ...)
 }
 
 /* Print an error message, call perror(), and exit with status error */
-void perror_exit(char* fmt, ...)
+void perror_exit(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

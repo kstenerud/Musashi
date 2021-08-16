@@ -30,6 +30,12 @@ these four paragraphs for those parts of this code that are retained.
 
 =============================================================================*/
 
+flag float32_is_nan( float32 a );
+flag float64_is_nan( float64 a );
+flag floatx80_is_nan( floatx80 a );
+floatx80 propagateFloatx80NaN( floatx80 a, floatx80 b );
+flag float128_is_nan( float128 a );
+
 /*----------------------------------------------------------------------------
 | Underflow tininess-detection mode, statically initialized to default value.
 | (The declaration in `softfloat.h' must match the `int8' type here.)
