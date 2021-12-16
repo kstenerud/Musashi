@@ -93,7 +93,7 @@ static const char g_version[] = "4.60";
 #define FILENAME_INPUT          "m68k_in.c"
 #define FILENAME_PROTOTYPE      "m68kops.h"
 #define FILENAME_TABLE          "m68kops.c"
-#define FILENAME_HANDLERS       "m68kops_hdl.c"
+#define FILENAME_HANDLERS       "m68kinst.c"
 #define FILENAME_TABLE_CONSTANT "m68kops_gen.c"
 
 
@@ -791,6 +791,7 @@ void get_base_name(char* base_name, opcode_struct* op)
 /* Write the name of an opcode handler function */
 void write_function_name(FILE* filep, char* base_name)
 {
+    /* If we're writing handlers to a separate file, they can't be static */
     if(constant_jump_table)
 	    fprintf(filep, "void %s(void)\n", base_name);
     else
@@ -895,12 +896,13 @@ void generate_opcode_handler(FILE* filep, body_struct* body, replace_struct* rep
 	add_opcode_output_table_entry(op, str);
 	write_function_name(filep, str);
 
+    /* Write function prototypes into the header if we're separating handlers and tables */
     /* TODO: should probably pass file pointer into this somehow */
     if(constant_jump_table)
         write_function_prototype(g_prototype_file, str);
 
 	/* Add any replace strings needed */
-	if(ea_mode != EA_MODE_NONE)
+    if(ea_mode != EA_MODE_NONE)
 	{
 		sprintf(str, "EA_%s_8()", g_ea_info_table[ea_mode].ea_add);
 		add_replace_string(replace, ID_OPHANDLER_EA_AY_8, str);
@@ -1420,6 +1422,7 @@ int main(int argc, char **argv)
 			if(ophandler_body_read)
 				error_exit("Duplicate opcode handler section");
 
+            /* Separate jump table and opcode handlers if we need to */
             if(constant_jump_table)
             {
                 fprintf(g_handler_file, "%s\n\n", ophandler_header_insert);
@@ -1474,12 +1477,15 @@ int main(int argc, char **argv)
 	fclose(g_table_file);
 	fclose(g_input_file);
 
+    if(g_handler_file != NULL)
+	    fclose(g_handler_file);
+
 	printf("Generated %d opcode handlers from %d primitives\n", g_num_functions, g_num_primitives);
 
     if(constant_jump_table)
         printf("Run \"make %s\" to finish jump and cycle table generation.\n", FILENAME_TABLE_CONSTANT);
 
-	return 0;
+    return 0;
 }
 
 

@@ -313,8 +313,11 @@ int main(int argc, char **argv)
 
     FILE* g_op_file = NULL;
 
-    if((g_op_file = fopen(filename, "wt")) == NULL)
-        perror_exit("Unable to create handler file m68kops.c\n");
+    if((g_op_file = fopen("m68kops.c", "wt")) == NULL)
+    {
+        printf("Unable to create handler file m68kops.c\n");
+        return -1;
+    }
 
     fprintf(g_op_file, "#include \"m68kops.h\"\n\n");
 
@@ -341,6 +344,7 @@ int main(int argc, char **argv)
     }
     fprintf(g_op_file, "};\n");
 
+    printf("Generated m68kops.c\n");
     fclose(g_op_file);
 }
 #endif
