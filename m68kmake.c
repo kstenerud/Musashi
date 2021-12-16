@@ -93,6 +93,7 @@ static const char g_version[] = "4.60";
 #define FILENAME_INPUT      "m68k_in.c"
 #define FILENAME_PROTOTYPE  "m68kops.h"
 #define FILENAME_TABLE      "m68kops.c"
+#define FILENAME_CONSTANT   "m68kops_const.c"
 
 
 /* Identifier sequences recognized by this program */
@@ -1240,20 +1241,33 @@ int main(int argc, char **argv)
 	printf("\n\tMusashi v%s 68000, 68008, 68010, 68EC020, 68020, 68EC030, 68030, 68EC040, 68040 emulator\n", g_version);
 	printf("\t\tCopyright Karl Stenerud (kstenerud@gmail.com)\n\n");
 
-	/* Check if output path and source for the input file are given */
+    /* Figure out if we need to generate a constant jump table */
     if(argc > 1)
-	{
-		char *ptr;
-		strcpy(output_path, argv[1]);
+    {
+        int argument_offset = 1;
 
-		for(ptr = strchr(output_path, '\\'); ptr; ptr = strchr(ptr, '\\'))
-			*ptr = '/';
-        if(output_path[strlen(output_path)-1] != '/')
-			strcat(output_path, "/");
-		if(argc > 2)
-			strcpy(g_input_filename, argv[2]);
-	}
+        if(strcmp(argv[1], "--constant"))
+        {
+            /* If the user gave us filenames, they're gonna come after this did */
+            argument_offset += 1;
 
+
+        }
+
+	    /* Check if output path and source for the input file are given */
+        if(argc > argument_offset)
+        {
+            char *ptr;
+            strcpy(output_path, argv[argument_offset]);
+
+            for(ptr = strchr(output_path, '\\'); ptr; ptr = strchr(ptr, '\\'))
+                *ptr = '/';
+            if(output_path[strlen(output_path)-1] != '/')
+                strcat(output_path, "/");
+            if(argc > argument_offset+1)
+                strcpy(g_input_filename, argv[argument_offset+1]);
+        }
+    }
 
 	/* Open the files we need */
 	sprintf(filename, "%s%s", output_path, FILENAME_PROTOTYPE);
