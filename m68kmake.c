@@ -78,10 +78,10 @@ static const char g_version[] = "4.60";
 #define M68K_MAX_PATH 1024
 #define M68K_MAX_DIR  1024
 
-#define MAX_LINE_LENGTH                 200	/* length of 1 line */
+#define MAX_LINE_LENGTH                 300	/* length of 1 line */
 #define MAX_BODY_LENGTH                 300	/* Number of lines in 1 function */
 #define MAX_REPLACE_LENGTH               30	/* Max number of replace strings */
-#define MAX_INSERT_LENGTH              5000	/* Max size of insert piece */
+#define MAX_INSERT_LENGTH             10000	/* Max size of insert piece */
 #define MAX_NAME_LENGTH                  30	/* Max length of ophandler name */
 #define MAX_SPEC_PROC_LENGTH              4	/* Max length of special processing str */
 #define MAX_SPEC_EA_LENGTH                5	/* Max length of specified EA str */
@@ -90,9 +90,11 @@ static const char g_version[] = "4.60";
 #define MAX_OPCODE_OUTPUT_TABLE_LENGTH 3000	/* Max length of opcode handler tbl */
 
 /* Default filenames */
-#define FILENAME_INPUT      "m68k_in.c"
-#define FILENAME_PROTOTYPE  "m68kops.h"
-#define FILENAME_TABLE      "m68kops.c"
+#define FILENAME_INPUT          "m68k_in.c"
+#define FILENAME_PROTOTYPE      "m68kops.h"
+#define FILENAME_TABLE          "m68kops.c"
+#define FILENAME_HANDLERS       "m68kinst.c"
+#define FILENAME_TABLE_CONSTANT "m68kops_gen.c"
 
 
 /* Identifier sequences recognized by this program */
@@ -259,10 +261,14 @@ char g_input_filename[M68K_MAX_PATH] = FILENAME_INPUT;
 FILE* g_input_file = NULL;
 FILE* g_prototype_file = NULL;
 FILE* g_table_file = NULL;
+FILE* g_handler_file = NULL;
 
 int g_num_functions = 0;  /* Number of functions processed */
 int g_num_primitives = 0; /* Number of function primitives read */
 int g_line_number = 1;    /* Current line number */
+
+/* Flag for constant jump table generation */
+int constant_jump_table = 0;
 
 /* Opcode handler table */
 opcode_struct g_opcode_input_table[MAX_OPCODE_INPUT_TABLE_LENGTH];
@@ -785,7 +791,17 @@ void get_base_name(char* base_name, opcode_struct* op)
 /* Write the name of an opcode handler function */
 void write_function_name(FILE* filep, char* base_name)
 {
-	fprintf(filep, "static void %s(void)\n", base_name);
+    /* If we're writing handlers to a separate file, they can't be static */
+    if(constant_jump_table)
+	    fprintf(filep, "void %s(void)\n", base_name);
+    else
+	    fprintf(filep, "static void %s(void)\n", base_name);
+}
+
+/* Write the prototype of an opcode handler function */
+void write_function_prototype(FILE* filep, char* base_name)
+{
+	fprintf(filep, "void %s(void);\n", base_name);
 }
 
 void add_opcode_output_table_entry(opcode_struct* op, char* name)
@@ -830,8 +846,17 @@ void write_table_entry(FILE* filep, opcode_struct* op)
 {
 	int i;
 
-	fprintf(filep, "\t{%-28s, 0x%04x, 0x%04x, {",
-		op->name, op->op_mask, op->op_match);
+    /* Either print the function names as strings or as actual function names */
+    if(constant_jump_table)
+    {
+        fprintf(filep, "\t{\"%-28s\", 0x%04x, 0x%04x, {",
+            op->name, op->op_mask, op->op_match);
+    }
+    else
+    {
+        fprintf(filep, "\t{%-28s, 0x%04x, 0x%04x, {",
+            op->name, op->op_mask, op->op_match);
+    }
 
 	for(i=0;i<NUM_CPUS;i++)
 	{
@@ -871,8 +896,13 @@ void generate_opcode_handler(FILE* filep, body_struct* body, replace_struct* rep
 	add_opcode_output_table_entry(op, str);
 	write_function_name(filep, str);
 
+    /* Write function prototypes into the header if we're separating handlers and tables */
+    /* TODO: should probably pass file pointer into this somehow */
+    if(constant_jump_table)
+        write_function_prototype(g_prototype_file, str);
+
 	/* Add any replace strings needed */
-	if(ea_mode != EA_MODE_NONE)
+    if(ea_mode != EA_MODE_NONE)
 	{
 		sprintf(str, "EA_%s_8()", g_ea_info_table[ea_mode].ea_add);
 		add_replace_string(replace, ID_OPHANDLER_EA_AY_8, str);
@@ -1237,32 +1267,67 @@ int main(int argc, char **argv)
 	int table_body_read = 0;
 	int ophandler_body_read = 0;
 
+
 	printf("\n\tMusashi v%s 68000, 68008, 68010, 68EC020, 68020, 68EC030, 68030, 68EC040, 68040 emulator\n", g_version);
 	printf("\t\tCopyright Karl Stenerud (kstenerud@gmail.com)\n\n");
 
-	/* Check if output path and source for the input file are given */
+    /* Figure out if we need to generate a constant jump table */
     if(argc > 1)
-	{
-		char *ptr;
-		strcpy(output_path, argv[1]);
+    {
+        int argument_offset = 1;
 
-		for(ptr = strchr(output_path, '\\'); ptr; ptr = strchr(ptr, '\\'))
-			*ptr = '/';
-        if(output_path[strlen(output_path)-1] != '/')
-			strcat(output_path, "/");
-		if(argc > 2)
-			strcpy(g_input_filename, argv[2]);
-	}
+        if(argv[1][0] == '-')
+        {
+            if(strcmp(argv[1], "--constant") == 0)
+            {
+                /* If the user gave us filenames, they're gonna come after this did */
+                argument_offset += 1;
 
+                /* Set flag so we can activate the appropriate #defines */
+                constant_jump_table = 1;
+            }
+            else
+            {
+                /* Abort if a flag was passed that we aren't explicitly handling. */
+                /* This prevents someone from accidentally writing the output file to "--constnt" or something */
+                printf("Unknown flag %s\n", argv[1]);
+                return -1;
+            }
+        }
+
+	    /* Check if output path and source for the input file are given */
+        if(argc > argument_offset)
+        {
+            char *ptr;
+            strcpy(output_path, argv[argument_offset]);
+
+            for(ptr = strchr(output_path, '\\'); ptr; ptr = strchr(ptr, '\\'))
+                *ptr = '/';
+            if(output_path[strlen(output_path)-1] != '/')
+                strcat(output_path, "/");
+            if(argc > argument_offset+1)
+                strcpy(g_input_filename, argv[argument_offset+1]);
+        }
+    }
 
 	/* Open the files we need */
 	sprintf(filename, "%s%s", output_path, FILENAME_PROTOTYPE);
 	if((g_prototype_file = fopen(filename, "wt")) == NULL)
 		perror_exit("Unable to create prototype file (%s)\n", filename);
 
-	sprintf(filename, "%s%s", output_path, FILENAME_TABLE);
+    if(constant_jump_table)
+	    sprintf(filename, "%s%s", output_path, FILENAME_TABLE_CONSTANT);
+    else
+	    sprintf(filename, "%s%s", output_path, FILENAME_TABLE);
 	if((g_table_file = fopen(filename, "wt")) == NULL)
 		perror_exit("Unable to create table file (%s)\n", filename);
+
+    if(constant_jump_table)
+    {
+	    sprintf(filename, "%s%s", output_path, FILENAME_HANDLERS);
+        if((g_handler_file = fopen(filename, "wt")) == NULL)
+		    perror_exit("Unable to create handler file (%s)\n", filename);
+    }
 
 	if((g_input_file=fopen(g_input_filename, "rt")) == NULL)
 		perror_exit("can't open %s for input", g_input_filename);
@@ -1286,6 +1351,12 @@ int main(int argc, char **argv)
 			read_insert(temp_insert);
 			fprintf(g_prototype_file, "%s\n\n", temp_insert);
 			prototype_header_read = 1;
+
+            /* If we want constant jump tables, #define it as such now */
+            if(constant_jump_table)
+            {
+                fprintf(g_prototype_file, "#define M68K_CONSTANT_JUMP_TABLE\n\n");
+            }
 		}
 		else if(strcmp(section_id, ID_TABLE_HEADER) == 0)
 		{
@@ -1351,9 +1422,19 @@ int main(int argc, char **argv)
 			if(ophandler_body_read)
 				error_exit("Duplicate opcode handler section");
 
-			fprintf(g_table_file, "%s\n\n", ophandler_header_insert);
-			process_opcode_handlers(g_table_file);
-			fprintf(g_table_file, "%s\n\n", ophandler_footer_insert);
+            /* Separate jump table and opcode handlers if we need to */
+            if(constant_jump_table)
+            {
+                fprintf(g_handler_file, "%s\n\n", ophandler_header_insert);
+                process_opcode_handlers(g_handler_file);
+                fprintf(g_handler_file, "%s\n\n", ophandler_footer_insert);
+            }
+            else
+            {
+                fprintf(g_table_file, "%s\n\n", ophandler_header_insert);
+                process_opcode_handlers(g_table_file);
+                fprintf(g_table_file, "%s\n\n", ophandler_footer_insert);
+            }
 
 			ophandler_body_read = 1;
 		}
@@ -1396,9 +1477,15 @@ int main(int argc, char **argv)
 	fclose(g_table_file);
 	fclose(g_input_file);
 
+    if(g_handler_file != NULL)
+	    fclose(g_handler_file);
+
 	printf("Generated %d opcode handlers from %d primitives\n", g_num_functions, g_num_primitives);
 
-	return 0;
+    if(constant_jump_table)
+        printf("Run \"make %s\" to finish jump and cycle table generation.\n", FILENAME_TABLE_CONSTANT);
+
+    return 0;
 }
 
 
