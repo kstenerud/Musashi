@@ -43,8 +43,16 @@
 extern void m68040_fpu_op0(void);
 extern void m68040_fpu_op1(void);
 extern void m68881_mmu_ops(void);
+
+/* If we're building const jump tables, we need to specify that in the extern line here. */
+#ifdef M68K_CONSTANT_JUMP_TABLE
+extern const unsigned char m68ki_cycles[][0x10000];
+extern const m68ki_instruction_jump_call m68ki_instruction_jump_table[0x10000]; /* opcode handler jump table */
+#else
 extern unsigned char m68ki_cycles[][0x10000];
 extern m68ki_instruction_jump_call m68ki_instruction_jump_table[0x10000]; /* opcode handler jump table */
+#endif
+
 extern void m68ki_build_opcode_table(void);
 
 #include "m68kcpu.h"

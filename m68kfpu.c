@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "m68kcpu.h"
 
 extern void exit(int);
 

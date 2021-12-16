@@ -104,7 +104,6 @@ M68KMAKE_PROTOTYPE_HEADER
 /* ======================================================================== */
 
 
-
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 M68KMAKE_PROTOTYPE_FOOTER
 
@@ -114,8 +113,13 @@ void m68ki_build_opcode_table(void);
 
 typedef void (*m68ki_instruction_jump_call)(void);
 
+#ifdef M68K_CONSTANT_JUMP_TABLE
+extern const m68ki_instruction_jump_call m68ki_instruction_jump_table[0x10000]; /* opcode handler jump table */
+extern const unsigned char m68ki_cycles[][0x10000];
+#else
 extern m68ki_instruction_jump_call m68ki_instruction_jump_table[0x10000]; /* opcode handler jump table */
 extern unsigned char m68ki_cycles[][0x10000];
+#endif
 
 
 /* ======================================================================== */
@@ -123,7 +127,6 @@ extern unsigned char m68ki_cycles[][0x10000];
 /* ======================================================================== */
 
 #endif /* M68KOPS__HEADER */
-
 
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -138,13 +141,34 @@ M68KMAKE_TABLE_HEADER
 
 #define NUM_CPU_TYPES 5
 
-void  (*m68ki_instruction_jump_table[0x10000])(void); /* opcode handler jump table */
+#ifdef M68K_CONSTANT_JUMP_TABLE
+
+char* m68ki_instruction_jump_table_fname[0x10000]; /* opcode handler jump table */
+#define M68K_JUMP_TABLE m68ki_instruction_jump_table_fname
+
+unsigned char m68ki_cycles_gen[NUM_CPU_TYPES][0x10000]; /* Cycles used by CPU type */
+#define M68K_CYCLES_TABLE m68ki_cycles_gen
+
+#else
+
+m68ki_instruction_jump_call m68ki_instruction_jump_table[0x10000]; /* opcode handler jump table */
+#define M68K_JUMP_TABLE m68ki_instruction_jump_table
+
 unsigned char m68ki_cycles[NUM_CPU_TYPES][0x10000]; /* Cycles used by CPU type */
+#define M68K_CYCLES_TABLE m68ki_cycles
+
+#endif
 
 /* This is used to generate the opcode handler jump table */
 typedef struct
 {
-	void (*opcode_handler)(void);        /* handler function */
+
+#ifdef M68K_CONSTANT_JUMP_TABLE
+    char* opcode_handler;               /* name of function to be called */
+#else
+	m68ki_instruction_jump_call opcode_handler; /* handler function */
+#endif
+
 	unsigned int  mask;                  /* mask on opcode */
 	unsigned int  match;                 /* what to match after masking */
 	unsigned char cycles[NUM_CPU_TYPES]; /* cycles each cpu type takes */
@@ -161,7 +185,11 @@ static const opcode_handler_struct m68k_opcode_handler_table[] =
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 M68KMAKE_TABLE_FOOTER
 
+#ifdef M68K_CONSTANT_JUMP_TABLE
+    {"", 0, 0, {0, 0, 0, 0, 0}}
+#else
 	{0, 0, 0, {0, 0, 0, 0, 0}}
+#endif
 };
 
 
@@ -178,9 +206,14 @@ void m68ki_build_opcode_table(void)
 	for(i = 0; i < 0x10000; i++)
 	{
 		/* default to illegal */
-		m68ki_instruction_jump_table[i] = m68k_op_illegal;
+        /* We still need the #ifdef here to choose between string and real function names */
+#ifdef M68K_CONSTANT_JUMP_TABLE
+	    M68K_JUMP_TABLE[i] = "m68k_op_illegal";
+#else
+		M68K_JUMP_TABLE[i] = m68k_op_illegal;
+#endif
 		for(k=0;k<NUM_CPU_TYPES;k++)
-			m68ki_cycles[k][i] = 0;
+			M68K_CYCLES_TABLE[k][i] = 0;
 	}
 
 	ostruct = m68k_opcode_handler_table;
@@ -190,9 +223,9 @@ void m68ki_build_opcode_table(void)
 		{
 			if((i & ostruct->mask) == ostruct->match)
 			{
-				m68ki_instruction_jump_table[i] = ostruct->opcode_handler;
+				M68K_JUMP_TABLE[i] = ostruct->opcode_handler;
 				for(k=0;k<NUM_CPU_TYPES;k++)
-					m68ki_cycles[k][i] = ostruct->cycles[k];
+					M68K_CYCLES_TABLE[k][i] = ostruct->cycles[k];
 			}
 		}
 		ostruct++;
@@ -201,9 +234,9 @@ void m68ki_build_opcode_table(void)
 	{
 		for(i = 0;i <= 0xff;i++)
 		{
-			m68ki_instruction_jump_table[ostruct->match | i] = ostruct->opcode_handler;
+			M68K_JUMP_TABLE[ostruct->match | i] = ostruct->opcode_handler;
 			for(k=0;k<NUM_CPU_TYPES;k++)
-				m68ki_cycles[k][ostruct->match | i] = ostruct->cycles[k];
+				M68K_CYCLES_TABLE[k][ostruct->match | i] = ostruct->cycles[k];
 		}
 		ostruct++;
 	}
@@ -214,19 +247,19 @@ void m68ki_build_opcode_table(void)
 			for(j = 0;j < 8;j++)
 			{
 				instr = ostruct->match | (i << 9) | j;
-				m68ki_instruction_jump_table[instr] = ostruct->opcode_handler;
+				M68K_JUMP_TABLE[instr] = ostruct->opcode_handler;
 				for(k=0;k<NUM_CPU_TYPES;k++)
-					m68ki_cycles[k][instr] = ostruct->cycles[k];
+					M68K_CYCLES_TABLE[k][instr] = ostruct->cycles[k];
 				// For all shift operations with known shift distance (encoded in instruction word)
 				if((instr & 0xf000) == 0xe000 && (!(instr & 0x20)))
 				{
 					// On the 68000 and 68010 shift distance affect execution time.
 					// Add the cycle cost of shifting; 2 times the shift distance
 					cycle_cost = ((((i-1)&7)+1)<<1);
-					m68ki_cycles[0][instr] += cycle_cost;
-					m68ki_cycles[1][instr] += cycle_cost;
+					M68K_CYCLES_TABLE[0][instr] += cycle_cost;
+					M68K_CYCLES_TABLE[1][instr] += cycle_cost;
 					// On the 68020 shift distance does not affect execution time
-					m68ki_cycles[2][instr] += 0;
+					M68K_CYCLES_TABLE[2][instr] += 0;
 				}
 			}
 		}
@@ -236,9 +269,9 @@ void m68ki_build_opcode_table(void)
 	{
 		for(i = 0;i <= 0x0f;i++)
 		{
-			m68ki_instruction_jump_table[ostruct->match | i] = ostruct->opcode_handler;
+			M68K_JUMP_TABLE[ostruct->match | i] = ostruct->opcode_handler;
 			for(k=0;k<NUM_CPU_TYPES;k++)
-				m68ki_cycles[k][ostruct->match | i] = ostruct->cycles[k];
+				M68K_CYCLES_TABLE[k][ostruct->match | i] = ostruct->cycles[k];
 		}
 		ostruct++;
 	}
@@ -246,9 +279,9 @@ void m68ki_build_opcode_table(void)
 	{
 		for(i = 0;i <= 0x07;i++)
 		{
-			m68ki_instruction_jump_table[ostruct->match | (i << 9)] = ostruct->opcode_handler;
+			M68K_JUMP_TABLE[ostruct->match | (i << 9)] = ostruct->opcode_handler;
 			for(k=0;k<NUM_CPU_TYPES;k++)
-				m68ki_cycles[k][ostruct->match | (i << 9)] = ostruct->cycles[k];
+				M68K_CYCLES_TABLE[k][ostruct->match | (i << 9)] = ostruct->cycles[k];
 		}
 		ostruct++;
 	}
@@ -256,21 +289,61 @@ void m68ki_build_opcode_table(void)
 	{
 		for(i = 0;i <= 0x07;i++)
 		{
-			m68ki_instruction_jump_table[ostruct->match | i] = ostruct->opcode_handler;
+			M68K_JUMP_TABLE[ostruct->match | i] = ostruct->opcode_handler;
 			for(k=0;k<NUM_CPU_TYPES;k++)
-				m68ki_cycles[k][ostruct->match | i] = ostruct->cycles[k];
+				M68K_CYCLES_TABLE[k][ostruct->match | i] = ostruct->cycles[k];
 		}
 		ostruct++;
 	}
 	while(ostruct->mask == 0xffff)
 	{
-		m68ki_instruction_jump_table[ostruct->match] = ostruct->opcode_handler;
+		M68K_JUMP_TABLE[ostruct->match] = ostruct->opcode_handler;
 		for(k=0;k<NUM_CPU_TYPES;k++)
-			m68ki_cycles[k][ostruct->match] = ostruct->cycles[k];
+			M68K_CYCLES_TABLE[k][ostruct->match] = ostruct->cycles[k];
 		ostruct++;
 	}
 }
 
+/* If we're building the jump table on the host, this file needs to be compiled and run. */
+/* Credit to sprite_tm for the following code */
+#ifdef M68K_CONSTANT_JUMP_TABLE
+int main(int argc, char **argv)
+{
+    m68ki_build_opcode_table();
+
+    FILE* g_op_file = NULL;
+
+    if((g_op_file = fopen(filename, "wt")) == NULL)
+        perror_exit("Unable to create handler file m68kops.c\n");
+
+    fprintf(g_op_file, "#include \"m68kops.h\"\n\n");
+
+    fprintf(g_op_file, "//Opcodes are built on the host, this does not need to do anything.\n");
+    fprintf(g_op_file, "void m68ki_build_opcode_table() {}\n\n");
+
+    fprintf(g_op_file, "const m68ki_instruction_jump_call m68ki_instruction_jump_table[]={\n");
+    for (int x=0; x<0x10000; x++) 
+    {
+        fprintf(g_op_file, "\t%s, \n", m68ki_instruction_jump_table_fname[x]);
+    }
+    fprintf(g_op_file, "};\n\n");
+
+    fprintf(g_op_file, "const unsigned char m68ki_cycles[%d][0x10000]={\n", 1);//NUM_CPU_TYPES);
+    for (int x=0; x<NUM_CPU_TYPES; x++) 
+    {
+        fprintf(g_op_file, "\t{");
+        for (int y=0; y<0x10000; y++) 
+        {
+            if ((y&15)==0) fprintf(g_op_file, "\n\t\t");
+                fprintf(g_op_file, "%d, ", m68ki_cycles_gen[x][y]);
+        }
+        fprintf(g_op_file, "\t},\n");
+    }
+    fprintf(g_op_file, "};\n");
+
+    fclose(g_op_file);
+}
+#endif
 
 /* ======================================================================== */
 /* ============================== END OF FILE ============================= */
