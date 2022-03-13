@@ -2950,7 +2950,8 @@ M68KMAKE_OP(bfins, 32, ., .)
 		if((width + offset) > 32)
 		{
 			mask_byte = MASK_OUT_ABOVE_8(mask_base);
-			insert_byte = MASK_OUT_ABOVE_8(insert_base);
+
+			insert_byte = MASK_OUT_ABOVE_8(insert_base << (8 - (offset & 7)));  // JFF: else offset isn't taken into account
 			data_byte = m68ki_read_8(ea+4);
 			FLAG_Z |= (data_byte & mask_byte);
 			m68ki_write_8(ea+4, (data_byte & ~mask_byte) | insert_byte);
