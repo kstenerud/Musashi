@@ -1,4 +1,4 @@
-#include "osd.h"
+ #include "osd.h"
 
 /* OS-dependant code to get a character from the user.
  * This function must not block, and must either return an ASCII code or -1.
