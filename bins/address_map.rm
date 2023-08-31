@@ -1,0 +1,21 @@
+A bunch of binary files with address listed.
+Sections:
+Idx Name                     Size     VMA      Type
+  0                          00000000 00000000
+  1 .text                    001f5bfc 0000c000 TEXT
+  2 .rodata                  0002f885 00201c00 DATA
+  3 link_set_sysctl_funcs    000000c8 00231488 DATA
+  4 link_set_modules         00000108 00231550 DATA
+  5 link_set_domains         00000020 00231658 DATA
+  6 link_set_evcnts          00000048 00231678 DATA
+  7 link_set_dkwedge_methods 00000004 002316c0 DATA
+  8 link_set_prop_linkpools  00000020 002316c4 DATA
+  9 .eh_frame                00000044 002316e4 DATA
+ 10 .data                    00016b8c 00231740 DATA
+ 11 .bss                     00018858 00248300 BSS
+ 12 .comment                 00000022 00000000
+ 13 .ident                   00009bfa 00000000
+ 14 .note.netbsd.ident       00000018 00000000
+ 15 .symtab                  00051d10 00000000
+ 16 .strtab                  000329d7 00000000
+ 17 .shstrtab                000000d3 00000000
