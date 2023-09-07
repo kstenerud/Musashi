@@ -65,11 +65,18 @@ unsigned int m68k_read_memory_8(unsigned int address) {
 
 //todo: m68k_read_memory_16
 unsigned int m68k_read_memory_16(unsigned int address) {
-
+    if (address >= MAX_MEM) {
+        exit_error("Attempted to read byte from address %08x beyond memory size", address);
+    }
+    return READ_16(g_mem, address);
 }
 
 //todo: m68k_read_memory_32
 unsigned int m68k_read_memory_32(unsigned int address) {
+    if (address >= MAX_MEM) {
+        exit_error("Attempted to read byte from address %08x beyond memory size", address);
+    }
+    return READ_32(g_mem, address);
 }
 
 /* write in 8 bytes to memory array */
