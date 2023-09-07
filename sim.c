@@ -65,6 +65,7 @@ unsigned int m68k_read_memory_8(unsigned int address) {
 
 //todo: m68k_read_memory_16
 unsigned int m68k_read_memory_16(unsigned int address) {
+
 }
 
 //todo: m68k_read_memory_32
@@ -83,8 +84,16 @@ void m68k_write_memory_8(unsigned int address, unsigned int value) {
     WRITE_8(g_mem, address, value);
 }
 
-//todo: m68k_write_memory_16
+/* write in 16 bytes to memory array */
 void m68k_write_memory_16(unsigned int address, unsigned int value) {
+    if (address > MAX_MEM) {
+        exit_error("Attempted to write byte to address %08x beyond memory size", address);
+    }
+    // Check if the address is within the ROM range
+    if (address <= MAX_ROM) {
+        exit_error("Attempted to write byte to ROM address %08x", address);
+    }
+    WRITE_16(g_mem, address, value);
 }
 
 //todo: m68k_write_memory_32
