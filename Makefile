@@ -1,7 +1,9 @@
 # Just a basic makefile to quickly test that everyting is working, it just
 # compiles the .o and the generator
+EXENAME          = sim
 
-MUSASHIFILES = m68kcpu.c m68kdasm.c softfloat/softfloat.c m68k_in.c
+MUSASHIFILES = m68kcpu.c m68kdasm.c softfloat/softfloat.c
+MAINFILES        = sim.c
 MUSASHIGENCFILES = m68kops.c
 MUSASHIGENHFILES = m68kops.h
 MUSASHIGENERATOR = m68kmake
@@ -17,15 +19,18 @@ WARNINGS  = -Wall -Wextra -pedantic
 CFLAGS    = $(WARNINGS)
 LFLAGS    = $(WARNINGS)
 
+TARGET = $(EXENAME)$(EXE)
 DELETEFILES = $(MUSASHIGENCFILES) $(MUSASHIGENHFILES) $(.OFILES) $(TARGET) $(MUSASHIGENERATOR)$(EXE)
 
 
-all: $(.OFILES)
+all: $(TARGET)
 
 clean:
 	rm -f $(DELETEFILES)
 
-m68kcpu.o: $(MUSASHIGENHFILES) m68kfpu.c m68kmmu.h softfloat/softfloat.c softfloat/softfloat.h
+$(TARGET): $(MUSASHIGENHFILES) $(.OFILES) Makefile
+	$(CC) -o $@ $(.OFILES) $(LFLAGS) -lm
+
 
 $(MUSASHIGENCFILES) $(MUSASHIGENHFILES): $(MUSASHIGENERATOR)$(EXE)
 	$(EXEPATH)$(MUSASHIGENERATOR)$(EXE)

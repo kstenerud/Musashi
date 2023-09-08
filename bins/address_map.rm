@@ -1,21 +1,22 @@
-A bunch of binary files with address listed.
-Sections:
-Idx Name                     Size     VMA      Type
-  0                          00000000 00000000
-  1 .text                    001f5bfc 0000c000 TEXT
-  2 .rodata                  0002f885 00201c00 DATA
-  3 link_set_sysctl_funcs    000000c8 00231488 DATA
-  4 link_set_modules         00000108 00231550 DATA
-  5 link_set_domains         00000020 00231658 DATA
-  6 link_set_evcnts          00000048 00231678 DATA
-  7 link_set_dkwedge_methods 00000004 002316c0 DATA
-  8 link_set_prop_linkpools  00000020 002316c4 DATA
-  9 .eh_frame                00000044 002316e4 DATA
- 10 .data                    00016b8c 00231740 DATA
- 11 .bss                     00018858 00248300 BSS
- 12 .comment                 00000022 00000000
- 13 .ident                   00009bfa 00000000
- 14 .note.netbsd.ident       00000018 00000000
- 15 .symtab                  00051d10 00000000
- 16 .strtab                  000329d7 00000000
- 17 .shstrtab                000000d3 00000000
+There are 18 section headers, starting at offset 0x2ca73c:
+
+Section Headers:
+  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+  [ 1] .text             PROGBITS        0000c000 000080 1f5bfc 00 WAX  0   0  8
+  [ 2] .rodata           PROGBITS        00201c00 1f5c80 02f885 00   A  0   0  8
+  [ 3] link_set_sys[...] PROGBITS        00231488 225508 0000c8 00   A  0   0  4
+  [ 4] link_set_modules  PROGBITS        00231550 2255d0 000108 00   A  0   0  4
+  [ 5] link_set_domains  PROGBITS        00231658 2256d8 000020 00   A  0   0  4
+  [ 6] link_set_evcnts   PROGBITS        00231678 2256f8 000048 00   A  0   0  4
+  [ 7] link_set_dkw[...] PROGBITS        002316c0 225740 000004 00   A  0   0  4
+  [ 8] link_set_pro[...] PROGBITS        002316c4 225744 000020 00   A  0   0  4
+  [ 9] .eh_frame         PROGBITS        002316e4 225764 000044 00   A  0   0  4
+  [10] .data             PROGBITS        00231740 2257c0 016b8c 00  WA  0   0 64
+  [11] .bss              NOBITS          00248300 23c34c 018858 00  WA  0   0 64
+  [12] .comment          PROGBITS        00000000 23c34c 000022 01  MS  0   0  1
+  [13] .ident            PROGBITS        00000000 23c36e 009bfa 01  MS  0   0  1
+  [14] .note.netbsd[...] NOTE            00000000 245f68 000018 00      0   0  4
+  [15] .symtab           SYMTAB          00000000 245f80 051d10 10     16 12768  4
+  [16] .strtab           STRTAB          00000000 297c90 0329d7 00      0   0  1
+  [17] .shstrtab         STRTAB          00000000 2ca667 0000d3 00      0   0  1
