@@ -55,7 +55,7 @@ void exit_error(char* fmt, ...) {
     exit(EXIT_FAILURE);
 }
 
-/* reads in 8 bytes from memory array */
+/* reads in 8 bits from memory array */
 unsigned int m68k_read_memory_8(unsigned int address) {
     if (address >= MAX_MEM) {
         exit_error("Attempted to read byte from address %08x beyond memory size", address);
@@ -63,7 +63,7 @@ unsigned int m68k_read_memory_8(unsigned int address) {
     return READ_8(g_mem, address);
 }
 
-//todo: m68k_read_memory_16
+/* reads in 16 bits from memory array */
 unsigned int m68k_read_memory_16(unsigned int address) {
     if (address >= MAX_MEM) {
         exit_error("Attempted to read byte from address %08x beyond memory size", address);
@@ -71,7 +71,7 @@ unsigned int m68k_read_memory_16(unsigned int address) {
     return READ_16(g_mem, address);
 }
 
-//todo: m68k_read_memory_32
+/* reads in 32 bits from memory array */
 unsigned int m68k_read_memory_32(unsigned int address) {
     if (address >= MAX_MEM) {
         exit_error("Attempted to read byte from address %08x beyond memory size", address);
@@ -79,7 +79,7 @@ unsigned int m68k_read_memory_32(unsigned int address) {
     return READ_32(g_mem, address);
 }
 
-/* write in 8 bytes to memory array */
+/* write in 8 bits to memory array */
 void m68k_write_memory_8(unsigned int address, unsigned int value) {
     if (address > MAX_MEM) {
         exit_error("Attempted to write byte to address %08x beyond memory size", address);
@@ -91,7 +91,7 @@ void m68k_write_memory_8(unsigned int address, unsigned int value) {
     WRITE_8(g_mem, address, value);
 }
 
-/* write in 16 bytes to memory array */
+/* write in 16 bits to memory array */
 void m68k_write_memory_16(unsigned int address, unsigned int value) {
     if (address > MAX_MEM) {
         exit_error("Attempted to write byte to address %08x beyond memory size", address);
