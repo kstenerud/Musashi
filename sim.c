@@ -123,6 +123,19 @@ void m68k_write_memory_32(unsigned int address, unsigned int value) {
     WRITE_32(g_mem, address, value);
 }
 
+unsigned int m68k_read_disassembler_16(unsigned int address)
+{
+    if(address > MAX_ROM)
+        exit_error("Disassembler attempted to read word from ROM address %08x", address);
+    return READ_16(g_mem, address);
+}
+
+unsigned int m68k_read_disassembler_32(unsigned int address)
+{
+    if(address > MAX_ROM)
+        exit_error("Dasm attempted to read long from ROM address %08x", address);
+    return READ_32(g_mem, address);
+}
 
 /* The sections to load */
 struct section sections[] = {
