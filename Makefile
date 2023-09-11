@@ -16,7 +16,7 @@ EXEPATH = ./
 
 CC        = gcc
 WARNINGS  = -Wall -Wextra -pedantic
-CFLAGS    = $(WARNINGS)
+CFLAGS    = $(WARNINGS) -g -O0
 LFLAGS    = $(WARNINGS)
 
 TARGET = $(EXENAME)$(EXE)

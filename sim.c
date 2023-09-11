@@ -6,7 +6,7 @@
 
 
 #define MAX_ROM 0xfff                           /* Memory size for rom */
-#define MAX_RAM 0xff                            /* Memory size for ram */
+#define MAX_RAM 0xffffff                            /* Memory size for ram */
 #define MAX_MEM (MAX_ROM+MAX_RAM)               /* ROM and RAM sizes */
 
 /* Read/write macros */
@@ -41,8 +41,9 @@ void m68k_write_memory_8(unsigned int address, unsigned int value);
 void m68k_write_memory_16(unsigned int address, unsigned int value);
 void m68k_write_memory_32(unsigned int address, unsigned int value);
 
+/* initiallize memory array to 0 */
+unsigned char g_mem[MAX_MEM+1] = {0};                 /* Memory in one array */
 
-unsigned char g_mem[MAX_MEM+1];                 /* Memory in one array */
 
 /* struct definition */
 struct section {
@@ -165,12 +166,23 @@ void load_section(const struct section* sec) {
     fclose(fhandle);
 }
 
-int main(int argc, char** argv) {
-    for (int i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
+int main(int argc, char* argv[]) {
+    unsigned int text_section_address = 0x0000c000; // Example address
+
+    // Convert the address to bytes and store it at memory[4] to memory[7]
+    g_mem[4] = (text_section_address >> 24) & 0xFF;
+    g_mem[5] = (text_section_address >> 16) & 0xFF;
+    g_mem[6] = (text_section_address >> 8) & 0xFF;
+    g_mem[7] = text_section_address & 0xFF;
+    for (unsigned long i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
         load_section(&sections[i]);
     }
     m68k_init();
     m68k_set_cpu_type(M68K_CPU_TYPE_68000);
     m68k_pulse_reset();
+
+    while(TRUE){
+        m68k_execute(100000);
+    }
 
 }
