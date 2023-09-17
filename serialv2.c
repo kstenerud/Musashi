@@ -1,9 +1,14 @@
+// serial version 2
+// this file works with the assumption that we're using bit shifting operations
+
 #include <ctype.h> // for toupper
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-// from sim.c
+
+/*--------------------------FROM SIM.C---------------------------------------------*/
+
 // maybe change this later if we don't want the program to end whenver there is an error
 // reading/writing to the serial chip
 void exit_error(char* fmt, ...){
@@ -16,14 +21,19 @@ void exit_error(char* fmt, ...){
     exit(EXIT_FAILURE);
 }
 
+#define READ_8(BASE, ADDR) (BASE)[ADDR]
+#define WRITE_8(BASE, ADDR, VAL) (BASE)[ADDR] = (VAL)&0xff
+
+/*-------------------------------------------------------------------------------*/
+
 // struct definition: represents each of the 4 registers that are used for serial communication
 // most likely that we'll only be reading to one channel from the microprocessor, but I'm just keeping
 // this in there
 struct serial_chip{
-    unsigned char aReceive[8];
-    unsigned char aTransmit[8];
-    unsigned char bReceive[8];
-    unsigned char bTransmit[8];
+    unsigned char aReceive;
+    unsigned char aTransmit;
+    unsigned char bReceive;
+    unsigned char bTransmit;
 };
 
 // Unlike C++ structs in C can't have member functions, so it will be a global variable
@@ -31,44 +41,38 @@ struct serial_chip{
 // declaration
 struct serial_chip chip;
 
-// zeroing out arrays for initialization (CALL THESE BEFORE USING CHIP)
-void array_init(char* array){ // in C you have to use the char*, or fixed number in brackets when calling array
-    for(unsigned int i=0; i<8; ++i){
-        array[i] = 0;
-    }
+// setting everything to 0
+void struct_init(){
+    chip.aReceive = 0;
+    chip.aTransmit = 0;
+    chip.bReceive = 0;
+    chip.bTransmit = 0;
 }
+
 
 // FUNCTION PARAMETERS:
 // channel = decide between a and b channels
-// index = which index you want to write into
 // val = new val to be written into said index
 
-void serial_write(char channel, unsigned int index, char val){
-    if(index < 0 || index >= 8){
-        exit_error("writing to invalid index");
-    }
-    
+void serial_write(char channel, char val){
     if(toupper(channel) == 'A'){
-        chip.aTransmit[index] = val;
+        WRITE_8(chip.aTransmit, &chip.aTransmit, val);
     }
     else if(toupper(channel) == 'B'){
-        chip.bTransmit[index] = val;
+        WRITE_8(chip.bTransmit, &chip.bTransmit, val);
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
     }
 }
 
-char serial_read(char channel, unsigned int index){
-    if(index < 0 || index >= 8){
-        exit_error("Attempting to read at an invalid index");
-    }
-    
+char serial_read(char channel){
+
     if(toupper(channel) == 'A'){
-        return chip.aReceive[index];
+        return READ_8(chip.aReceive, &chip.aReceive);
     }
     else if(toupper(channel) == 'B'){
-        return chip.bReceive[index];
+        return READ_8(chip.bReceive, &chip.bTransmit);
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
@@ -100,7 +104,7 @@ void print_register(char channel, char type){
         }
     }  
     else{
-        printf("Invalid channel name. Use either 'A' or 'B'");
+        printf("Invalid channel name. Use either A or B");
     }
 }
 
