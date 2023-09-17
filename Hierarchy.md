@@ -1,4 +1,5 @@
-#unsigned int m68k_read_memory_8(unsigned int address)
+## unsigned int m68k_read_memory_8(unsigned int address)
+'''
 m68ki_exception_address_error (m68kcpu.h)
 m68ki_exception_bus_error (m68kcpu.h)
     m68k_pulse_bus_error (m68kcpu.c)
@@ -20,6 +21,7 @@ m68ki_read_8_fc (m68kcpu.h)
     READ_EA_8 (m68kfpu.c)(5 usages)
         fpgen_rm_reg (m68kfpu.c)
             m68040_fpu_op0 (m68kfpu.c)
+'''
 
 
 #unsigned int m68k_read_memory_16(unsigned int address)
