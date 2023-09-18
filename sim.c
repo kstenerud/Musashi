@@ -170,10 +170,7 @@ int main(int argc, char* argv[]) {
     unsigned int text_section_address = 0x0000c000; // Example address
 
     // Convert the address to bytes and store it at memory[4] to memory[7]
-    g_mem[4] = (text_section_address >> 24) & 0xFF;
-    g_mem[5] = (text_section_address >> 16) & 0xFF;
-    g_mem[6] = (text_section_address >> 8) & 0xFF;
-    g_mem[7] = text_section_address & 0xFF;
+    WRITE_32(g_mem, 4, text_section_address);
     for (unsigned long i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
         load_section(&sections[i]);
     }
