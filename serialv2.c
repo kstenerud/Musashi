@@ -54,25 +54,27 @@ void struct_init(){
 // channel = decide between a and b channels
 // val = new val to be written into said index
 
+// data going from processor to serial via xReceive
 void serial_write(char channel, char val){
     if(toupper(channel) == 'A'){
-        WRITE_8(chip.aTransmit, &chip.aTransmit, val);
+        WRITE_8(chip.aReceive, &chip.aReceive, val);
     }
     else if(toupper(channel) == 'B'){
-        WRITE_8(chip.bTransmit, &chip.bTransmit, val);
+        WRITE_8(chip.bReceive, &chip.bReceive, val);
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
     }
 }
 
+// data going from the serial to the processor via xTransmit
 char serial_read(char channel){
 
     if(toupper(channel) == 'A'){
-        return READ_8(chip.aReceive, &chip.aReceive);
+        return READ_8(chip.aTransmit, &chip.aTransmit);
     }
     else if(toupper(channel) == 'B'){
-        return READ_8(chip.bReceive, &chip.bTransmit);
+        return READ_8(chip.bTransmit, &chip.bTransmit);
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
