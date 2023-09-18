@@ -1,6 +1,21 @@
 // serial version 2
 // this file works with the assumption that we're using bit shifting operations
 
+
+/* TO DO ------------------------------------------------
+
+ 
+1.  make functions that control reads/writes to control + status registers
+2.  circular buffer
+
+
+(maybe: emulate interrupts)
+
+*/
+
+
+
+
 #include <ctype.h> // for toupper
 #include <stdlib.h>
 #include <stdarg.h>
@@ -30,11 +45,30 @@ void exit_error(char* fmt, ...){
 // most likely that we'll only be reading to one channel from the microprocessor, but I'm just keeping
 // this in there
 struct serial_chip{
-    unsigned char aReceive;
-    unsigned char aTransmit;
-    unsigned char bReceive;
-    unsigned char bTransmit;
+
+    /* ---------- SIO BUFFERS
+     
+    these buffers should be circular buffers
+    make sure that reading/writing only happen if there is space within buffer
+    if read/write pointers overlap, buffer is full -> don't write anymore to buffer
+    if read/write are one apart, buffer is empty
+
+    Note: Waiting to hear back from Goodney to see if we can make A channel and B channel one array, or
+    if we keep separate ones for Receive and Transmit <- also look on dataseet
+
+    */
+
+    unsigned char aReceive[16]; 
+    unsigned char aTransmit[16];
+    unsigned char bReceive[16];
+    unsigned char bTransmit[16];
+
+    //---------- CONTROL AND STATUS REGISTERS -------------------------------------
+
+    unsigned char controlRegister[8];
+    unsigned char statusRegister[5];
 };
+
 
 // Unlike C++ structs in C can't have member functions, so it will be a global variable
 // that is called by functions below, also have to specify that serial_chip is struct in
@@ -42,11 +76,21 @@ struct serial_chip{
 struct serial_chip chip;
 
 // setting everything to 0
-void struct_init(){
-    chip.aReceive = 0;
-    chip.aTransmit = 0;
-    chip.bReceive = 0;
-    chip.bTransmit = 0;
+void chip_init(){
+
+    for(int i=0; i<16; ++i){
+        if(i<5){
+            chip.controlRegister[i] = 0;
+        }
+        if(i<8){
+            chip.statusRegister[i] = 0;
+        }
+        chip.aReceive[i] = 0;
+        chip.aTransmit[i] = 0;
+        chip.bReceive[i] = 0;
+        chip.bTransmit[i] = 0;
+    }
+
 }
 
 
@@ -54,27 +98,30 @@ void struct_init(){
 // channel = decide between a and b channels
 // val = new val to be written into said index
 
-// data going from processor to serial via xReceive
-void serial_write(char channel, char val){
+
+// transmit: processor (m68k) -> serial chip's transmit buffer -> other separate devices [one byte at a time]
+unsigned char serial_transmit(char channel, char val){
     if(toupper(channel) == 'A'){
-        WRITE_8(chip.aReceive, &chip.aReceive, val);
+        WRITE_8(chip.aTransmit, /* buffer write pointer */, val);
+        return chip.aTransmit[/* */];
     }
     else if(toupper(channel) == 'B'){
-        WRITE_8(chip.bReceive, &chip.bReceive, val);
+        WRITE_8(chip.bTransmit, /* buffer write pointer */, val);
+        return chip.bTransmit[/* */];
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
     }
 }
 
-// data going from the serial to the processor via xTransmit
-char serial_read(char channel){
+// receive: other separate devices -> serial chip's receive buffer -> processor (m68k) [one byte at a time]
+unsigned char serial_read(char channel){
 
     if(toupper(channel) == 'A'){
-        return READ_8(chip.aTransmit, &chip.aTransmit);
+        return chip.aReceive[/* buffer read pointer */];
     }
     else if(toupper(channel) == 'B'){
-        return READ_8(chip.bTransmit, &chip.bTransmit);
+        return chip.bReceive[/* buffer read pointer */];
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
@@ -109,7 +156,3 @@ void print_register(char channel, char type){
         printf("Invalid channel name. Use either A or B");
     }
 }
-
-// FOR LATER: emulate interrupts
-
-
