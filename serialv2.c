@@ -41,6 +41,64 @@ void exit_error(char* fmt, ...){
 
 /*-------------------------------------------------------------------------------*/
 
+// circular buffer struct
+struct circular_buffer{
+    unsigned char buffer[16];
+    // read and write pointers point to the index of the buffer
+    int readPointer;
+    int writePointer;
+};
+
+void buffer_init(struct circular_buffer* buffer){
+    // initialize read and write pointers point to the index of the buffer
+    buffer->readPointer = 0;
+    buffer->writePointer = 0;
+    // initialize buffer to 0
+    for(int i=0; i<16; ++i){
+        buffer->buffer[i] = 0;
+    }
+}
+
+// circular buffer functions
+// read from buffer at read pointer
+unsigned char buffer_read(struct circular_buffer* buffer){
+    // if buffer is empty, return -1
+    if(buffer->readPointer == buffer->writePointer){
+        return -1;
+    }
+    // else, read value at read pointer and increment read pointer
+    else{
+        unsigned char val = buffer->buffer[buffer->readPointer];
+        buffer->readPointer = (buffer->readPointer + 1) % 16;
+        return val;
+    }
+}
+
+// write to buffer
+void buffer_write(struct circular_buffer* buffer, unsigned char val){
+    // if buffer is full, return -1
+    if((buffer->writePointer + 1) % 16 == buffer->readPointer){
+        return -1;
+    }
+    // else, write value to write pointer and increment write pointer
+    else{
+        buffer->buffer[buffer->writePointer] = val;
+        buffer->writePointer = (buffer->writePointer + 1) % 16;
+    }
+}
+
+// print existing items in buffer, empty spaces are represented by 0 so don't print those
+void buffer_print(struct circular_buffer* buffer){
+    for(int i=0; i<16; ++i){
+        if(buffer->buffer[i] != 0){
+            printf("%c", buffer->buffer[i]);
+        } else {
+            break;
+        }
+    }
+}
+
+
 // struct definition: represents each of the 4 registers that are used for serial communication
 // most likely that we'll only be reading to one channel from the microprocessor, but I'm just keeping
 // this in there
@@ -58,10 +116,10 @@ struct serial_chip{
 
     */
 
-    unsigned char aReceive[16]; 
-    unsigned char aTransmit[16];
-    unsigned char bReceive[16];
-    unsigned char bTransmit[16];
+    struct circular_buffer aReceive; 
+    struct circular_buffer aTransmit;
+    struct circular_buffer bReceive;
+    struct circular_buffer bTransmit;
 
     //---------- CONTROL AND STATUS REGISTERS -------------------------------------
 
@@ -77,20 +135,18 @@ struct serial_chip chip;
 
 // setting everything to 0
 void chip_init(){
-
-    for(int i=0; i<16; ++i){
+    // initialize the chip's registers to 0 by calling buffer_init on each of them
+    buffer_init(&chip.aReceive);
+    buffer_init(&chip.aTransmit);
+    buffer_init(&chip.bReceive);
+    buffer_init(&chip.bTransmit);
+    // initialize control and status registers to 0
+    for(int i=0; i<8; ++i){
+        chip.statusRegister[i] = 0;
         if(i<5){
             chip.controlRegister[i] = 0;
         }
-        if(i<8){
-            chip.statusRegister[i] = 0;
-        }
-        chip.aReceive[i] = 0;
-        chip.aTransmit[i] = 0;
-        chip.bReceive[i] = 0;
-        chip.bTransmit[i] = 0;
     }
-
 }
 
 
@@ -102,12 +158,12 @@ void chip_init(){
 // transmit: processor (m68k) -> serial chip's transmit buffer -> other separate devices [one byte at a time]
 unsigned char serial_transmit(char channel, char val){
     if(toupper(channel) == 'A'){
-        WRITE_8(chip.aTransmit, /* buffer write pointer */, val);
-        return chip.aTransmit[/* */];
+        WRITE_8(chip.aTransmit, &chip.aTransmit.writePointer, val);
+        return buffer_read(&chip.aTransmit);
     }
     else if(toupper(channel) == 'B'){
-        WRITE_8(chip.bTransmit, /* buffer write pointer */, val);
-        return chip.bTransmit[/* */];
+        WRITE_8(chip.bTransmit, &chip.bTransmit.writePointer, val);
+        return buffer_read(&chip.bTransmit);
     }
     else{ // Only allowed to look at A and B channels
         exit_error("Invalid channel name. Use either 'A' or 'B'");
@@ -132,10 +188,10 @@ unsigned char serial_read(char channel){
 void print_register(char channel, char type){
     if(toupper(channel) == 'A'){
         if(type == 't'){
-            printf(chip.aTransmit);
+            buffer_print(&chip.aTransmit);
         }
         else if(type == 'r'){
-            printf(chip.aReceive);
+            buffer_print(&chip.aReceive);
         }
         else{
             exit_error("Invalid channel type");
@@ -143,10 +199,10 @@ void print_register(char channel, char type){
     }
     else if(toupper(channel) == 'B'){
         if(type == 't'){
-            printf(chip.aTransmit);
+            buffer_print(&chip.bTransmit);
         }
         else if(type == 'r'){
-            printf(chip.aReceive);
+            buffer_print(&chip.bReceive);
         }
         else{
             exit_error("Invalid channel type. Use either 't' (transmit) or 'r' (receive)");
