@@ -83,7 +83,14 @@ unsigned int m68k_read_memory_16(unsigned int address) {
 /* reads in 32 bits from memory array */
 unsigned int m68k_read_memory_32(unsigned int address) {
     if (address >= MAX_MEM) {
+<<<<<<< Updated upstream
         exit_error("Attempted to read byte from address %08x beyond memory size", address);
+=======
+        //printf("Marked address is %u\n", address);
+        if(address == EPROM_ADDRESS) return MAX_RAM+1;
+        if(address == PLANEMASK_ADDRESS) return 0xff;
+        else exit_error("Attempted to read byte(read_32) from address %08x beyond memory size", address);
+>>>>>>> Stashed changes
     }
     return READ_32(g_mem, address);
 }
