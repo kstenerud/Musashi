@@ -1782,6 +1782,7 @@ static void d68040_fpu(void)
 				case 0x38:	sprintf(mnemonic, "fcmp"); break;
 				case 0x3a:	sprintf(mnemonic, "ftst"); break;
 				case 0x41:	sprintf(mnemonic, "fssqrt"); break;
+				case 0x44:	sprintf(mnemonic, "fdmoved"); break;
 				case 0x45:	sprintf(mnemonic, "fdsqrt"); break;
 				case 0x58:	sprintf(mnemonic, "fsabs"); break;
 				case 0x5a:	sprintf(mnemonic, "fsneg"); break;
