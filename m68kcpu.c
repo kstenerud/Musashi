@@ -1006,7 +1006,11 @@ int m68k_execute(int num_cycles)
 		SET_CYCLES(0);
 
 	/* return how many clocks we used */
-	return m68ki_initial_cycles - GET_CYCLES();
+	if (num_cycles == m68ki_initial_cycles)
+		return m68ki_initial_cycles - GET_CYCLES();
+
+	/* modified by end_timeslice. */
+	return num_cycles - m68ki_initial_cycles;
 }
 
 
