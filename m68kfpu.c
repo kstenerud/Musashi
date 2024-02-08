@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "m68kcpu.h"
 
 extern void exit(int);
 
@@ -374,6 +375,16 @@ static uint8 READ_EA_8(int ea)
 			uint32 ea = REG_A[reg];
 			return m68ki_read_8(ea);
 		}
+		case 3:		// (An)+
+		{
+			uint32 ea = EA_AY_PI_8();
+			return m68ki_read_8(ea);
+		}
+		case 4:		// -(An)
+		{
+			uint32 ea = EA_AY_PD_8();
+			return m68ki_read_8(ea);
+		}
 		case 5:		// (d16, An)
 		{
 			uint32 ea = EA_AY_DI_8();
@@ -428,6 +439,16 @@ static uint16 READ_EA_16(int ea)
 		case 2:		// (An)
 		{
 			uint32 ea = REG_A[reg];
+			return m68ki_read_16(ea);
+		}
+		case 3:		// (An)+
+		{
+			uint32 ea = EA_AY_PI_16();
+			return m68ki_read_16(ea);
+		}
+		case 4:		// -(An)
+		{
+			uint32 ea = EA_AY_PD_16();
 			return m68ki_read_16(ea);
 		}
 		case 5:		// (d16, An)
@@ -490,6 +511,11 @@ static uint32 READ_EA_32(int ea)
 		case 3:		// (An)+
 		{
 			uint32 ea = EA_AY_PI_32();
+			return m68ki_read_32(ea);
+		}
+		case 4:		// -(An)
+		{
+			uint32 ea = EA_AY_PD_32();
 			return m68ki_read_32(ea);
 		}
 		case 5:		// (d16, An)
@@ -559,9 +585,24 @@ static uint64 READ_EA_64(int ea)
 			h2 = m68ki_read_32(ea+4);
 			return  (uint64)(h1) << 32 | (uint64)(h2);
 		}
+		case 4:		// -(An)
+		{
+			REG_A[reg] -= 8;
+			uint32 ea = REG_A[reg];
+			h1 = m68ki_read_32(ea+0);
+			h2 = m68ki_read_32(ea+4);
+			return  (uint64)(h1) << 32 | (uint64)(h2);
+		}
 		case 5:		// (d16, An)
 		{
 			uint32 ea = EA_AY_DI_32();
+			h1 = m68ki_read_32(ea+0);
+			h2 = m68ki_read_32(ea+4);
+			return  (uint64)(h1) << 32 | (uint64)(h2);
+		}
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_16();
 			h1 = m68ki_read_32(ea+0);
 			h2 = m68ki_read_32(ea+4);
 			return  (uint64)(h1) << 32 | (uint64)(h2);
@@ -570,6 +611,15 @@ static uint64 READ_EA_64(int ea)
 		{
 			switch (reg)
 			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					h1 = m68ki_read_32(ea+0);
+					h2 = m68ki_read_32(ea+4);
+					return  (uint64)(h1) << 32 | (uint64)(h2);
+				}
 				case 4:		// #<data>
 				{
 					h1 = OPER_I_32();
@@ -606,7 +656,6 @@ static floatx80 READ_EA_FPE(int mode, int reg, uint32 di_mode_ea)
 			fpr = load_extended_float80(ea);
 			break;
 		}
-
 		case 3:		// (An)+
 		{
 			uint32 ea = REG_A[reg];
@@ -614,16 +663,35 @@ static floatx80 READ_EA_FPE(int mode, int reg, uint32 di_mode_ea)
 			fpr = load_extended_float80(ea);
 			break;
 		}
+		case 4:		// -(An)
+		{
+			REG_A[reg] -= 12;
+			uint32 ea = REG_A[reg];
+			fpr = load_extended_float80(ea);
+			break;
+		}
       case 5:		// (d16, An)  (added by JFF)
 		{
 		  fpr = load_extended_float80(di_mode_ea);
 	  	break;
-
+		}
+	  case 6:		// (An) + (Xn) + d8
+		{
+		  uint32 ea = EA_AY_IX_16();
+		  fpr = load_extended_float80(ea);
+		  break;
 		}
 		case 7:	// extended modes
 		{
 			switch (reg)
 			{
+				case 1:		// (xxx).L
+					{
+						uint32 d1 = OPER_I_16();
+						uint32 d2 = OPER_I_16();
+						fpr = load_extended_float80((d1 << 16) | d2);
+					}
+					break;
 				case 2:	// (d16, PC)
 					{
 						uint32 ea = EA_PCDI_32();
@@ -676,6 +744,13 @@ static floatx80 READ_EA_PACK(int ea)
 		{
 			uint32 ea = REG_A[reg];
 			REG_A[reg] += 12;
+			fpr = load_pack_float80(ea);
+			break;
+		}
+		case 4:		// -(An)
+		{
+			REG_A[reg] -= 12;
+			uint32 ea = REG_A[reg];
 			fpr = load_pack_float80(ea);
 			break;
 		}
@@ -927,6 +1002,15 @@ static void WRITE_EA_64(int ea, uint64 data)
 			m68ki_write_32(ea+4, (uint32)(data));
 			break;
 		}
+		case 3:		// (An)+
+		{
+			uint32 ea;
+			ea = REG_A[reg];
+			REG_A[reg] += 8;
+			m68ki_write_32(ea+0, (uint32)(data >> 32));
+			m68ki_write_32(ea+4, (uint32)(data));
+			break;
+		}
 		case 4:		// -(An)
 		{
 			uint32 ea;
@@ -941,6 +1025,38 @@ static void WRITE_EA_64(int ea, uint64 data)
 			uint32 ea = EA_AY_DI_32();
 			m68ki_write_32(ea+0, (uint32)(data >> 32));
 			m68ki_write_32(ea+4, (uint32)(data));
+			break;
+		}
+
+		case 6:		// (An) + (Xn) + d8
+		{
+			uint32 ea = EA_AY_IX_16();
+			m68ki_write_32(ea+0, (uint32)(data >> 32));
+			m68ki_write_32(ea+4, (uint32)(data));
+			break;
+		}
+		case 7:
+		{
+			switch (reg)
+			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					m68ki_write_32(ea+0, (uint32)(data >> 32));
+					m68ki_write_32(ea+4, (uint32)(data));
+					break;
+				}
+				case 2:		// (d16, PC)
+				{
+					uint32 ea = EA_PCDI_32();
+					m68ki_write_32(ea+0, (uint32)(data >> 32));
+					m68ki_write_32(ea+4, (uint32)(data));
+					break;
+				}
+				default:	fatalerror("M68kFPU: WRITE_EA_64: unhandled mode %d, data %08X%08X at %08X\n", mode, reg, (uint32)(data >> 32), (uint32)(data), REG_PC);
+			}
 			break;
 		}
 		default:	fatalerror("M68kFPU: WRITE_EA_64: unhandled mode %d, reg %d, data %08X%08X at %08X\n", mode, reg, (uint32)(data >> 32), (uint32)(data), REG_PC);
@@ -991,6 +1107,15 @@ static void WRITE_EA_FPE(int mode, int reg, floatx80 fpr, uint32 di_mode_ea)
 		{
 			switch (reg)
 			{
+				case 1:		// (xxx).L
+				{
+					uint32 d1 = OPER_I_16();
+					uint32 d2 = OPER_I_16();
+					uint32 ea = (d1 << 16) | d2;
+					store_extended_float80(ea, fpr);
+					break;
+				}
+
 				default:	fatalerror("M68kFPU: WRITE_EA_FPE: unhandled mode %d, reg %d, at %08X\n", mode, reg, REG_PC);
 			}
 			break;
@@ -1044,6 +1169,11 @@ static void WRITE_EA_PACK(int ea, int k, floatx80 fpr)
 	}
 }
 
+static inline int is_inf(floatx80 reg) {
+	if (((reg.high & 0x7fff) == 0x7fff) && ((reg.low<<1) == 0))
+		return reg.high & 0x8000 ? -1 : 1;
+	return 0;
+}
 
 static void fpgen_rm_reg(uint16 w2)
 {
@@ -1053,6 +1183,7 @@ static void fpgen_rm_reg(uint16 w2)
 	int dst = (w2 >>  7) & 0x7;
 	int opmode = w2 & 0x7f;
 	floatx80 source;
+	int round;
 
 	// fmovecr #$f, fp0	f200 5c0f
 
@@ -1159,8 +1290,62 @@ static void fpgen_rm_reg(uint16 w2)
 						source = int32_to_floatx80((sint32)10*10);
 						break;
 
+					case 0x35:	// 10^4
+						source = int32_to_floatx80((sint32)10000);
+						break;
+
+					case 0x36:  // 10^8
+						source = double_to_fx80(1e8);
+						break;
+
+					case 0x37:  // 10^16
+						source = double_to_fx80(1e16);
+						break;
+
+					case 0x38:  // 10^32
+						source = double_to_fx80(1e32);
+						break;
+
+					case 0x39:  // 10^64
+						source = double_to_fx80(1e64);
+						break;
+
+					case 0x3a:  // 10^128
+						source = double_to_fx80(1e128);
+						break;
+
+					case 0x3b:  // 10^256
+						source = double_to_fx80(1e256);
+						break;
+
+					case 0x3c:  // 10^512
+						source = double_to_fx80(1e256);
+						source = floatx80_mul(source, source);
+						break;
+
+					case 0x3d:  // 10^1024
+						source = double_to_fx80(1e256);
+						source = floatx80_mul(source, source);
+						source = floatx80_mul(source, source);
+						break;
+
+					case 0x3e:  // 10^2048
+						source = double_to_fx80(1e256);
+						source = floatx80_mul(source, source);
+						source = floatx80_mul(source, source);
+						source = floatx80_mul(source, source);
+						break;
+
+					case 0x3f:  // 10^4096
+						source = double_to_fx80(1e256);
+						source = floatx80_mul(source, source);
+						source = floatx80_mul(source, source);
+						source = floatx80_mul(source, source);
+						source = floatx80_mul(source, source);
+						break;
+
 					default:
-						fatalerror("fmove_rm_reg: unknown constant ROM offset %x at %08x\n", w2&0x7f, REG_PC-4);
+						source = int32_to_floatx80((sint32)0);
 						break;
 				}
 
@@ -1178,7 +1363,16 @@ static void fpgen_rm_reg(uint16 w2)
 		source = REG_FP[src];
 	}
 
-
+	if ((opmode & 0x44) == 0x44)
+	{
+		round = 2;
+		opmode &= ~0x44;
+	} else if (opmode & 0x40)
+	{
+		round = 1;
+		opmode &= ~0x40;
+	} else
+		round = 0;
 
 	switch (opmode)
 	{
@@ -1228,6 +1422,32 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(3);
 			break;
 		}
+		case 0xe:		// SIN
+			REG_FP[dst] = double_to_fx80(sin(fx80_to_double(source)));
+	    	SET_CONDITION_CODES(REG_FP[dst]); // JFF
+			USE_CYCLES(400);
+			break;
+		case 0x1d:		// COS
+			REG_FP[dst] = double_to_fx80(cos(fx80_to_double(source)));
+	    	SET_CONDITION_CODES(REG_FP[dst]); // JFF
+			USE_CYCLES(400);
+			break;
+		case 0x30:		// SINCOS
+		case 0x31:		// SINCOS
+		case 0x32:		// SINCOS
+		case 0x33:		// SINCOS
+		case 0x34:		// SINCOS
+		case 0x35:		// SINCOS
+		case 0x36:		// SINCOS
+		case 0x37:		// SINCOS
+		{
+			double ds = fx80_to_double(source);
+			REG_FP[dst] = double_to_fx80(sin(ds));
+			REG_FP[opmode&7] = double_to_fx80(cos(ds));
+	    	SET_CONDITION_CODES(REG_FP[dst]); // JFF
+			USE_CYCLES(400);
+			break;
+		}
 		case 0x1e:		// FGETEXP
 		{
 			sint16 temp;
@@ -1238,11 +1458,24 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(6);
 			break;
 		}
-  	    case 0x60:		// FSDIVS (JFF) (source has already been converted to floatx80)
 		case 0x20:		// FDIV
 		{
 			REG_FP[dst] = floatx80_div(REG_FP[dst], source);
 		    SET_CONDITION_CODES(REG_FP[dst]); // JFF
+			USE_CYCLES(43);
+			break;
+		}
+		case 0x21:		// FMOD
+		{
+			REG_FP[dst] = floatx80_rem(REG_FP[dst], source);
+		    	SET_CONDITION_CODES(REG_FP[dst]);
+			USE_CYCLES(43);
+			break;
+		}
+		case 0x24:		// FSGLDIV
+		{
+			REG_FP[dst] = double_to_fx80((float)fx80_to_double(floatx80_div(REG_FP[dst], source)));
+		    	SET_CONDITION_CODES(REG_FP[dst]); // JFF
 			USE_CYCLES(43);
 			break;
 		}
@@ -1253,10 +1486,16 @@ static void fpgen_rm_reg(uint16 w2)
 			USE_CYCLES(9);
 			break;
 		}
-   		case 0x63:		// FSMULS (JFF) (source has already been converted to floatx80)
 		case 0x23:		// FMUL
 		{
 			REG_FP[dst] = floatx80_mul(REG_FP[dst], source);
+			SET_CONDITION_CODES(REG_FP[dst]);
+			USE_CYCLES(11);
+			break;
+		}
+		case 0x27:		// FSGLMUL
+		{
+			REG_FP[dst] = double_to_fx80((float)fx80_to_double(floatx80_mul(REG_FP[dst], source)));
 			SET_CONDITION_CODES(REG_FP[dst]);
 			USE_CYCLES(11);
 			break;
@@ -1278,8 +1517,30 @@ static void fpgen_rm_reg(uint16 w2)
 		case 0x38:		// FCMP
 		{
 			floatx80 res;
+			// handle inf in comparison if there is no nan.
+			int d = is_inf(REG_FP[dst]);
+			int s = is_inf(source);
+			if (!floatx80_is_nan(REG_FP[dst]) && !floatx80_is_nan(source) && (d || s))
+			{
+				REG_FPSR &= ~(FPCC_N|FPCC_Z|FPCC_I|FPCC_NAN);
+
+				if (s < 0) {
+					if (d < 0)
+						REG_FPSR |= FPCC_N | FPCC_Z;
+				} else
+				if (s > 0) {
+					if (d > 0)
+						REG_FPSR |= FPCC_Z;
+					else
+						REG_FPSR |= FPCC_N;
+				} else
+				if (d < 0)
+					REG_FPSR |= FPCC_N;
+
+			} else {
 			res = floatx80_sub(REG_FP[dst], source);
 			SET_CONDITION_CODES(res);
+			}
 			USE_CYCLES(7);
 			break;
 		}
@@ -1294,6 +1555,16 @@ static void fpgen_rm_reg(uint16 w2)
 
 		default:	fatalerror("fpgen_rm_reg: unimplemented opmode %02X at %08X\n", opmode, REG_PC-4);
 	}
+	if (round == 1)
+	{
+		// round to single
+		REG_FP[dst] = double_to_fx80((float)fx80_to_double(REG_FP[dst]));
+	} else if (round == 2)
+	{
+		// round to double
+		REG_FP[dst] = double_to_fx80(fx80_to_double(REG_FP[dst]));
+	}
+
 }
 
 static void fmove_reg_mem(uint16 w2)
