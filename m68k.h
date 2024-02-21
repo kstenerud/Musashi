@@ -293,7 +293,23 @@ void m68k_set_fc_callback(void  (*callback)(unsigned int new_fc));
  */
 void m68k_set_instr_hook_callback(void  (*callback)(unsigned int pc));
 
+/* Operation done after aline callback.
+ * Normal behaviour is triggering a CPU exception.
+ * If you use the aline hook for own emulator traps
+ * then you can decide to do nothing in CPU emulation
+ * or perform an automatic RTS instruction afterwards.
+ */
+#define M68K_ALINE_NONE   0
+#define M68K_ALINE_EXCEPT 1
+#define M68K_ALINE_RTS    2
 
+/* Set the aline callback. It will be executed every
+ * time an 0xaxxx opcode is encountered. Parameters are
+ * (opcode, current_pc). The return value is one of
+ * M68K_ALINE_* (see above).
+ * Default behaviour: CPU exception.
+ */
+void m68k_set_aline_hook_callback(int (*callback)(unsigned int, unsigned int));
 
 /* ======================================================================== */
 /* ====================== FUNCTIONS TO ACCESS THE CPU ===================== */

@@ -175,6 +175,9 @@
  */
 #define M68K_EMULATE_ADDRESS_ERROR  OPT_OFF
 
+/* Intercept A-Line opcodes and call an own hook. */
+#define M68K_ALINE_HOOK             OPT_OFF
+#define M68K_ALINE_CALLBACK()       your_aline_hook_function()
 
 /* Turn ON to enable logging of illegal instruction calls.
  * M68K_LOG_FILEHANDLE must be #defined to a stdio file stream.

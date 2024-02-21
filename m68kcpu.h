@@ -396,6 +396,7 @@ typedef uint32 uint64;
 #define CALLBACK_PC_CHANGED  m68ki_cpu.pc_changed_callback
 #define CALLBACK_SET_FC      m68ki_cpu.set_fc_callback
 #define CALLBACK_INSTR_HOOK  m68ki_cpu.instr_hook_callback
+#define CALLBACK_ALINE_HOOK  m68ki_cpu.aline_hook_callback
 
 
 
@@ -684,6 +685,16 @@ extern jmp_buf m68ki_aerr_trap;
 	#define M68K_DO_LOG_EMU(A)
 #endif
 
+/* Aline hook */
+#if M68K_ALINE_HOOK
+       #if M68K_ALINE_HOOK == OPT_SPECIFY_HANDLER
+               #define m68ki_aline_hook() M68K_ALINE_CALLBACK()
+       #else
+               #define m68ki_aline_hook() CALLBACK_ALINE_HOOK()
+       #endif
+#else
+       #define m68ki_aline_hook()  M68K_ALINE_EXCEPT
+#endif /* M68K_ALINE_HOOK */
 
 
 /* -------------------------- EA / Operand Access ------------------------- */
@@ -1000,7 +1011,7 @@ typedef struct
 	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
 	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
 	void (*instr_hook_callback)(unsigned int pc);     /* Called every instruction cycle prior to execution */
-
+	int  (*aline_hook_callback)(unsigned int opcode, unsigned int pc); /* Called if invalid a-line opcode occurred */
 } m68ki_cpu_core;
 
 
@@ -1952,6 +1963,10 @@ extern int cpu_log_enabled;
 /* Exception for A-Line instructions */
 static inline void m68ki_exception_1010(void)
 {
+#if M68K_ALINE_HOOK
+	int res = CALLBACK_ALINE_HOOK(REG_IR,ADDRESS_68K(REG_PPC));
+	if(res == M68K_ALINE_EXCEPT) {
+#endif
 	uint sr;
 #if M68K_LOG_1010_1111 == OPT_ON
 	M68K_DO_LOG_EMU((M68K_LOG_FILEHANDLE "%s at %08x: called 1010 instruction %04x (%s)\n",
@@ -1965,6 +1980,12 @@ static inline void m68ki_exception_1010(void)
 
 	/* Use up some clock cycles and undo the instruction's cycles */
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_1010] - CYC_INSTRUCTION[REG_IR]);
+#if M68K_ALINE_HOOK
+	} else if(res == M68K_ALINE_RTS) {
+		m68ki_trace_t0();                             /* auto-disable (see m68kcpu.h) */
+		m68ki_jump(m68ki_pull_32());
+	}
+#endif
 }
 
 /* Exception for F-Line instructions */
