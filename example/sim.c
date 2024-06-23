@@ -6,7 +6,7 @@
 #include "m68k.h"
 #include "osd.h"
 
-void disassemble_program();
+void disassemble_program(void);
 
 /* Memory-mapped IO ports */
 #define INPUT_ADDRESS 0x800000
@@ -473,7 +473,7 @@ void make_hex(char* buff, unsigned int pc, unsigned int length)
 	}
 }
 
-void disassemble_program()
+void disassemble_program(void)
 {
 	unsigned int pc;
 	unsigned int instr_size;

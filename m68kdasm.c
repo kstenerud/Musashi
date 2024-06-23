@@ -354,7 +354,7 @@ static int make_int_32(int value)
 /* Get string representation of hex values */
 static char* make_signed_hex_str_8(uint val)
 {
-	static char str[20];
+	static char str[21];
 
 	val &= 0xff;
 
@@ -370,7 +370,7 @@ static char* make_signed_hex_str_8(uint val)
 
 static char* make_signed_hex_str_16(uint val)
 {
-	static char str[20];
+	static char str[21];
 
 	val &= 0xffff;
 
@@ -386,7 +386,7 @@ static char* make_signed_hex_str_16(uint val)
 
 static char* make_signed_hex_str_32(uint val)
 {
-	static char str[20];
+	static char str[21];
 
 	val &= 0xffffffff;
 
@@ -404,7 +404,7 @@ static char* make_signed_hex_str_32(uint val)
 /* make string of immediate value */
 static char* get_imm_str_s(uint size)
 {
-	static char str[15];
+	static char str[21];
 	if(size == 0)
 		sprintf(str, "#%s", make_signed_hex_str_8(read_imm_8()));
 	else if(size == 1)
@@ -416,7 +416,7 @@ static char* get_imm_str_s(uint size)
 
 static char* get_imm_str_u(uint size)
 {
-	static char str[15];
+	static char str[21];
 	if(size == 0)
 		sprintf(str, "#$%x", read_imm_8() & 0xff);
 	else if(size == 1)
