@@ -472,7 +472,7 @@ typedef uint32 uint64;
 
 /* Enable or disable callback functions */
 #if M68K_EMULATE_INT_ACK
-	#if M68K_EMULATE_INT_ACK == OPT_SPECIFY_HANDLER
+	#if M68K_EMULATE_INT_ACK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_int_ack(A) M68K_INT_ACK_CALLBACK(A)
 	#else
 		#define m68ki_int_ack(A) CALLBACK_INT_ACK(A)
@@ -483,7 +483,7 @@ typedef uint32 uint64;
 #endif /* M68K_EMULATE_INT_ACK */
 
 #if M68K_EMULATE_BKPT_ACK
-	#if M68K_EMULATE_BKPT_ACK == OPT_SPECIFY_HANDLER
+	#if M68K_EMULATE_BKPT_ACK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_bkpt_ack(A) M68K_BKPT_ACK_CALLBACK(A)
 	#else
 		#define m68ki_bkpt_ack(A) CALLBACK_BKPT_ACK(A)
@@ -493,7 +493,7 @@ typedef uint32 uint64;
 #endif /* M68K_EMULATE_BKPT_ACK */
 
 #if M68K_EMULATE_RESET
-	#if M68K_EMULATE_RESET == OPT_SPECIFY_HANDLER
+	#if M68K_EMULATE_RESET == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_output_reset() M68K_RESET_CALLBACK()
 	#else
 		#define m68ki_output_reset() CALLBACK_RESET_INSTR()
@@ -503,7 +503,7 @@ typedef uint32 uint64;
 #endif /* M68K_EMULATE_RESET */
 
 #if M68K_CMPILD_HAS_CALLBACK
-	#if M68K_CMPILD_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+	#if M68K_CMPILD_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_cmpild_callback(v,r) M68K_CMPILD_CALLBACK(v,r)
 	#else
 		#define m68ki_cmpild_callback(v,r) CALLBACK_CMPILD_INSTR(v,r)
@@ -513,7 +513,7 @@ typedef uint32 uint64;
 #endif /* M68K_CMPILD_HAS_CALLBACK */
 
 #if M68K_RTE_HAS_CALLBACK
-	#if M68K_RTE_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+	#if M68K_RTE_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_rte_callback() M68K_RTE_CALLBACK()
 	#else
 		#define m68ki_rte_callback() CALLBACK_RTE_INSTR()
@@ -523,7 +523,7 @@ typedef uint32 uint64;
 #endif /* M68K_RTE_HAS_CALLBACK */
 
 #if M68K_TAS_HAS_CALLBACK
-	#if M68K_TAS_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+	#if M68K_TAS_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_tas_callback() M68K_TAS_CALLBACK()
 	#else
 		#define m68ki_tas_callback() CALLBACK_TAS_INSTR()
@@ -533,7 +533,7 @@ typedef uint32 uint64;
 #endif /* M68K_TAS_HAS_CALLBACK */
 
 #if M68K_ILLG_HAS_CALLBACK
-	#if M68K_ILLG_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+	#if M68K_ILLG_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_illg_callback(opcode) M68K_ILLG_CALLBACK(opcode)
 	#else
 		#define m68ki_illg_callback(opcode) CALLBACK_ILLG_INSTR(opcode)
@@ -543,7 +543,7 @@ typedef uint32 uint64;
 #endif /* M68K_ILLG_HAS_CALLBACK */
 
 #if M68K_INSTRUCTION_HOOK
-	#if M68K_INSTRUCTION_HOOK == OPT_SPECIFY_HANDLER
+	#if M68K_INSTRUCTION_HOOK == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_instr_hook(pc) M68K_INSTRUCTION_CALLBACK(pc)
 	#else
 		#define m68ki_instr_hook(pc) CALLBACK_INSTR_HOOK(pc)
@@ -553,7 +553,7 @@ typedef uint32 uint64;
 #endif /* M68K_INSTRUCTION_HOOK */
 
 #if M68K_MONITOR_PC
-	#if M68K_MONITOR_PC == OPT_SPECIFY_HANDLER
+	#if M68K_MONITOR_PC == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_pc_changed(A) M68K_SET_PC_CALLBACK(ADDRESS_68K(A))
 	#else
 		#define m68ki_pc_changed(A) CALLBACK_PC_CHANGED(ADDRESS_68K(A))
@@ -565,7 +565,7 @@ typedef uint32 uint64;
 
 /* Enable or disable function code emulation */
 #if M68K_EMULATE_FC
-	#if M68K_EMULATE_FC == OPT_SPECIFY_HANDLER
+	#if M68K_EMULATE_FC == M68K_OPT_SPECIFY_HANDLER
 		#define m68ki_set_fc(A) M68K_SET_FC_CALLBACK(A)
 	#else
 		#define m68ki_set_fc(A) CALLBACK_SET_FC(A)
@@ -1869,7 +1869,7 @@ static inline void m68ki_exception_trace(void)
 
 	if(CPU_TYPE_IS_010_LESS(CPU_TYPE))
 	{
-		#if M68K_EMULATE_ADDRESS_ERROR == OPT_ON
+		#if M68K_EMULATE_ADDRESS_ERROR == M68K_OPT_ON
 		if(CPU_TYPE_IS_000(CPU_TYPE))
 		{
 			CPU_INSTR_MODE = INSTRUCTION_NO;
@@ -1894,7 +1894,7 @@ static inline void m68ki_exception_privilege_violation(void)
 {
 	uint sr = m68ki_init_exception();
 
-	#if M68K_EMULATE_ADDRESS_ERROR == OPT_ON
+	#if M68K_EMULATE_ADDRESS_ERROR == M68K_OPT_ON
 	if(CPU_TYPE_IS_000(CPU_TYPE))
 	{
 		CPU_INSTR_MODE = INSTRUCTION_NO;
@@ -1954,7 +1954,7 @@ extern int cpu_log_enabled;
 static inline void m68ki_exception_1010(void)
 {
 	uint sr;
-#if M68K_LOG_1010_1111 == OPT_ON
+#if M68K_LOG_1010_1111 == M68K_OPT_ON
 	M68K_DO_LOG_EMU((M68K_LOG_FILEHANDLE "%s at %08x: called 1010 instruction %04x (%s)\n",
 					 m68ki_cpu_names[CPU_TYPE], ADDRESS_68K(REG_PPC), REG_IR,
 					 m68ki_disassemble_quick(ADDRESS_68K(REG_PPC))));
@@ -1973,7 +1973,7 @@ static inline void m68ki_exception_1111(void)
 {
 	uint sr;
 
-#if M68K_LOG_1010_1111 == OPT_ON
+#if M68K_LOG_1010_1111 == M68K_OPT_ON
 	M68K_DO_LOG_EMU((M68K_LOG_FILEHANDLE "%s at %08x: called 1111 instruction %04x (%s)\n",
 					 m68ki_cpu_names[CPU_TYPE], ADDRESS_68K(REG_PPC), REG_IR,
 					 m68ki_disassemble_quick(ADDRESS_68K(REG_PPC))));
@@ -1987,7 +1987,7 @@ static inline void m68ki_exception_1111(void)
 	USE_CYCLES(CYC_EXCEPTION[EXCEPTION_1111] - CYC_INSTRUCTION[REG_IR]);
 }
 
-#if M68K_ILLG_HAS_CALLBACK == OPT_SPECIFY_HANDLER
+#if M68K_ILLG_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
 extern int m68ki_illg_callback(int);
 #endif
 
@@ -2004,7 +2004,7 @@ static inline void m68ki_exception_illegal(void)
 
 	sr = m68ki_init_exception();
 
-	#if M68K_EMULATE_ADDRESS_ERROR == OPT_ON
+	#if M68K_EMULATE_ADDRESS_ERROR == M68K_OPT_ON
 	if(CPU_TYPE_IS_000(CPU_TYPE))
 	{
 		CPU_INSTR_MODE = INSTRUCTION_NO;
@@ -2068,7 +2068,7 @@ static inline void m68ki_exception_interrupt(uint int_level)
 	uint sr;
 	uint new_pc;
 
-	#if M68K_EMULATE_ADDRESS_ERROR == OPT_ON
+	#if M68K_EMULATE_ADDRESS_ERROR == M68K_OPT_ON
 	if(CPU_TYPE_IS_000(CPU_TYPE))
 	{
 		CPU_INSTR_MODE = INSTRUCTION_NO;
