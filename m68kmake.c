@@ -64,6 +64,7 @@ static const char g_version[] = "4.60";
 /* ======================================================================== */
 
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -220,12 +221,12 @@ typedef struct
 /* Function Prototypes */
 void error_exit(const char* fmt, ...);
 void perror_exit(const char* fmt, ...);
-int check_strsncpy(char* dst, char* src, int maxlength);
-int check_atoi(char* str, int *result);
-int skip_spaces(char* str);
+ptrdiff_t check_strsncpy(char* dst, char* src, int maxlength);
+ptrdiff_t check_atoi(char* str, int *result);
+ptrdiff_t skip_spaces(char* str);
 int num_bits(int value);
 int atoh(char* buff);
-int fgetline(char* buff, int nchars, FILE* file);
+size_t fgetline(char* buff, int nchars, FILE* file);
 int get_oper_cycles(opcode_struct* op, int ea_mode, int cpu_type);
 opcode_struct* find_opcode(char* name, int size, char* spec_proc, char* spec_ea);
 opcode_struct* find_illegal_opcode(void);
@@ -503,7 +504,7 @@ void perror_exit(const char* fmt, ...)
 
 
 /* copy until 0 or space and exit with error if we read too far */
-int check_strsncpy(char* dst, char* src, int maxlength)
+ptrdiff_t check_strsncpy(char* dst, char* src, int maxlength)
 {
 	char* p = dst;
 	while(*src && *src != ' ')
@@ -517,7 +518,7 @@ int check_strsncpy(char* dst, char* src, int maxlength)
 }
 
 /* copy until 0 or specified character and exit with error if we read too far */
-int check_strcncpy(char* dst, char* src, char delim, int maxlength)
+ptrdiff_t check_strcncpy(char* dst, char* src, char delim, int maxlength)
 {
 	char* p = dst;
 	while(*src && *src != delim)
@@ -531,7 +532,7 @@ int check_strcncpy(char* dst, char* src, char delim, int maxlength)
 }
 
 /* convert ascii to integer and exit with error if we find invalid data */
-int check_atoi(char* str, int *result)
+ptrdiff_t check_atoi(char* str, int *result)
 {
 	int accum = 0;
 	char* p = str;
@@ -547,7 +548,7 @@ int check_atoi(char* str, int *result)
 }
 
 /* Skip past spaces in a string */
-int skip_spaces(char* str)
+ptrdiff_t skip_spaces(char* str)
 {
 	char* p = str;
 
@@ -590,9 +591,9 @@ int atoh(char* buff)
 }
 
 /* Get a line of text from a file, discarding any end-of-line characters */
-int fgetline(char* buff, int nchars, FILE* file)
+size_t fgetline(char* buff, int nchars, FILE* file)
 {
-	int length;
+	size_t length;
 
 	if(fgets(buff, nchars, file) == NULL)
 		return -1;
@@ -1158,7 +1159,7 @@ void read_insert(char* insert)
 {
 	char* ptr = insert;
 	char* overflow = insert + MAX_INSERT_LENGTH - MAX_LINE_LENGTH;
-	int length;
+	size_t length;
 	char* first_blank = NULL;
 
 	first_blank = NULL;
