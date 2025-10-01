@@ -320,17 +320,6 @@ int main(int argc, char* argv[]) {
     if (arg < argc) {
         printf("FP data not implemented\n");
         return EXIT_FAILURE;
-        // if (arg + 3 > argc) {
-        //     std::cerr
-        //     << "Usage: test_driver filename.bin fpfile operand_num fpcr"
-        //     << std::endl;
-        //     return EXIT_FAILURE;
-        // }
-        //
-        // const char* fpfile = argv[arg++];
-        // unsigned opnum = std::strtoul(argv[arg++], nullptr, 10);
-        // uint32_t fpcr = std::strtoul(argv[arg++], nullptr, 16);
-        // fp_support.emplace(load_fp_support(fpfile, opnum, fpcr));
     }
 
     ram_slot_init(&g_stack);
