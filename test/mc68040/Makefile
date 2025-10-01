@@ -1,5 +1,5 @@
 
-.TESTS_68040 = bfchg.s bfclr.s bfext.s bfffo.s bfins.s bfset.s bftst.s
+.TESTS_68040 = bfchg.s bfclr.s bfext.s bfffo.s bfins.s bfset.s bftst.s divs_long.s divu_long.s mul_long.s
 
 
 .TESTS_68040_O = $(.TESTS_68040:%.s=%.o)
