@@ -25,6 +25,5 @@ m68kmake
 m68kops.?
 sim
 tags
-test/*.bin
-test/*.o
+*.bin
 test_driver

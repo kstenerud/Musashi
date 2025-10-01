@@ -48,9 +48,14 @@ TESTS_68000 = abcd adda add_i addq add addx andi_to_ccr andi_to_sr and \
                nbcd negs op_cmp_i ori_to_ccr ori_to_sr or \
                rox roxx rtr sbcd scc shifts2 shifts suba sub_i subq sub subx swap trapv
 
+TESTS_68040 = bfchg bfclr bfext bfffo bfins bfset bftst
+
 TESTS_68000_RUN = $(TESTS_68000:%=%.bin)
-$(TESTS_68000_RUN): %.bin: test_driver$(EXE)
-	./test_driver$(EXE) test/$@
+$(TESTS_68000_RUN): test_driver$(EXE)
+	./test_driver$(EXE) test/mc68000/$@
 
+TESTS_68040_RUN = $(TESTS_68040:%=%.bin)
+$(TESTS_68040_RUN): test_driver$(EXE)
+	./test_driver$(EXE) test/mc68040/$@
 
-test: $(TESTS_68000_RUN)
+test: $(TESTS_68000_RUN) $(TESTS_68040_RUN)
