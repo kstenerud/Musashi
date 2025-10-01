@@ -39,6 +39,7 @@ extern "C" {
 
 #include "m68k.h"
 
+#include <assert.h>
 #include <limits.h>
 
 #include <setjmp.h>
@@ -2146,6 +2147,115 @@ static inline void m68ki_check_interrupts(void)
 		m68ki_exception_interrupt(CPU_INT_LEVEL>>8);
 }
 
+/* Helper to load a bitfield from EA */
+typedef struct {
+	uint32 field;
+
+	/** When dealing with bitfields to/from memory,
+	 * we need to support offsets not aligned to a byte boundary.
+	 * Since the maximum width of a bitfield is 32, that means accessing at most
+	 * 5 bytes.
+	 * When writing back the result, we need to leave the bits outside the accessed
+	 * bitfield alone. To do that, we track the 5 bytes we read here
+	 */
+	uint32 lo;
+	uint8 hi;
+
+} m68ki_bitfield_t;
+
+static inline m68ki_bitfield_t m68ki_make_bf(uint32 lo, uint8 hi, unsigned offset) {
+	m68ki_bitfield_t ret;
+	ret.field = (lo << offset) | (hi >> (8 - offset));
+	ret.lo = lo;
+	ret.hi = hi;
+	return ret;
+}
+
+static inline m68ki_bitfield_t m68ki_load_bitfield(uint32 addr, unsigned offset, unsigned width) {
+	assert(offset < 8);
+
+	/* Figure out how many bytes we need to load */
+	unsigned bcount = (offset + width + 7) / 8;
+	assert(bcount <= 5 && bcount > 0);
+
+	if (bcount == 1) {
+		uint8 lo = m68ki_read_8(addr);
+		return m68ki_make_bf(((uint32)lo) << 24, 0, offset);
+	}
+
+	if (bcount < 4) {
+		uint16 lo1 = m68ki_read_16(addr);
+
+		if (bcount == 2)
+			return m68ki_make_bf(((uint32)lo1) << 16, 0, offset);
+
+		uint8 lo2 = m68ki_read_8(addr + 2);
+		return m68ki_make_bf((((uint32)lo1) << 16) | (((uint32)lo2) << 8), 0, offset);
+	}
+
+	/* bcount = 4 or 5 */
+	uint32 lo = m68ki_read_32(addr);
+
+	if (bcount == 4)
+		return m68ki_make_bf(lo, 0, offset);
+
+	uint8 hi = m68ki_read_8(addr + 4);
+	return m68ki_make_bf(lo, hi, offset);
+}
+
+
+/** val << shift but works when shift >= 32 */
+static uint32 lshift32_safe(uint32 val, unsigned shift) {
+	return shift < 32 ? (val << shift) : 0;
+}
+
+static inline unsigned m68ki_bitfield_patch_offset(int32 offset) {
+	return ((uint32)offset) % 8;
+}
+
+static inline uint32 m68ki_bitfield_patch_ea(uint32 ea, int32 offset) {
+	return ea + (offset >= 0 ? offset / 8 : -((7 - offset) / 8));
+}
+
+static inline void m68ki_store_bitfield(uint32 addr, unsigned offset, unsigned width,
+										uint32 res, m68ki_bitfield_t* bf) {
+
+	assert(offset < 8);
+
+	/* Figure out how many bytes we need to store */
+	unsigned bcount = (offset + width + 7) / 8;
+	assert(bcount <= 5 && bcount > 0);
+
+	/* Masks the bits in *field_lo which are outside the bitfield, thus we need to preserve them. */
+	uint32 lomask = lshift32_safe(0xFFFFFFFF, 32 - offset);
+	uint8 himask = (0xFF >> offset) & 0xFF;
+
+	/* Rebuild lo & hi */
+	uint32 lo = (bf->lo & lomask) | (res >> offset);
+	uint8 hi = (bf->hi & himask) | ((res << (8 - offset) & 0xFF));
+
+	if (bcount == 1) {
+		m68ki_write_8(addr, (lo >> 24) & 0xFF);
+		return;
+	}
+
+	if (bcount < 4) {
+		m68ki_write_16(addr, (lo >> 16) & 0xFFFF);
+		if (bcount == 2)
+			return;
+
+		m68ki_write_8(addr + 2, (lo >> 8) & 0xFF);
+		return;
+	}
+
+	/* bcount = 4 or 5 */
+	m68ki_write_32(addr, lo);
+
+	if (bcount == 4)
+		return;
+
+	m68ki_write_8(addr + 4, hi);
+}
 
 
 /* ======================================================================== */
