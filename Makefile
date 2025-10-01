@@ -49,7 +49,7 @@ TESTS_68000 = abcd adda add_i addq add addx andi_to_ccr andi_to_sr and \
                rox roxx rtr sbcd scc shifts2 shifts suba sub_i subq sub subx swap trapv
 
 TESTS_68040 = bfchg bfclr bfext bfffo bfins bfset bftst cas chk2 cmp2 \
-	divs_long divu_long jmp mul_long rtd shifts3 trapcc
+	divs_long divu_long interrupt jmp mul_long rtd shifts3 trapcc
 
 TESTS_68000_RUN = $(TESTS_68000:%=%.bin)
 $(TESTS_68000_RUN): test_driver$(EXE)

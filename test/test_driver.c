@@ -130,20 +130,18 @@ void test_write8(memory_device_t*, uint32_t addr, uint8_t val) {
 
 void test_write16(memory_device_t*, uint32_t /*addr*/, uint16_t /*val*/) {}
 
-void test_write32(memory_device_t* dev, uint32_t addr, uint32_t /*val*/) {
+void test_write32(memory_device_t* dev, uint32_t addr, uint32_t val) {
     test_device_t* td = (test_device_t*)dev;
     if (addr == 0x0)
         ++td->test_fail_count;
     if (addr == 0x4)
         ++td->test_pass_count;
-    // if (addr == 0x8)
-    //     print_registers(*machine);
-    // if (addr == 0xc) {
-    //     am68k::set_irq(*machine, value & 0x7);
-    // }
-    // if (addr == 0x20)
-    //     print_fp(*machine, value);
+    if (addr == 0xc) {
+        m68k_set_irq(val & 0x7);
+        m68k_end_timeslice();
+    }
 }
+
 void test_device_init(test_device_t* dev) {
     dev->test_pass_count = 0;
     dev->test_fail_count = 0;

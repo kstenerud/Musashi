@@ -1,6 +1,6 @@
 
 .TESTS_68040 = bfchg.s bfclr.s bfext.s bfffo.s bfins.s bfset.s bftst.s cas.s chk2.s cmp2.s \
-	divs_long.s divu_long.s jmp.s mul_long.s rtd.s shifts3.s trapcc.s
+	divs_long.s divu_long.s interrupt.s jmp.s mul_long.s rtd.s shifts3.s trapcc.s
 
 
 .TESTS_68040_O = $(.TESTS_68040:%.s=%.o)
