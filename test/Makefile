@@ -1,7 +1,7 @@
 M68K_AS = m68k-elf-as
 M68K_ASFLAGS = -march=68040 -g --gdwarf-sections
 M68K_LD = m68k-elf-ld
-M68K_LDFLAGS = -Ttext 0 --oformat binary
+M68K_LDFLAGS = -Ttext 0x10000 --oformat binary
 EXE =
 
 .TESTS_68000 = abcd.s adda.s add_i.s addq.s add.s addx.s andi_to_ccr.s andi_to_sr.s and.s \

@@ -4,6 +4,8 @@
 /*-----------------------------------------------------------*/
 op_BCHG: 
 
+.set SRC_LOC,   STACK2_BASE - 0x200
+.set DST_LOC,   SRC_LOC + 0x100
 
 /*  Bit Number Static */
     
@@ -152,15 +154,15 @@ op_BCHG:
             bne TEST_FAIL               /* branch if Z clear*/
             
             /* EA = x.L  - BYTE only*/
-            mov.l #0x000F0100 , %a0      /* point to memory to address 0x100 */
+            mov.l #SRC_LOC , %a0      /* point to memory to address 0x100 */
             mov.b #0x01 , (%a0)+         /* populate test data*/
             mov.b #0xFC , (%a0)+         /* populate test data*/
             mov.b #0x80 , (%a0)+         /* populate test data*/
-            bchg.b #0 , (0x000F0100) 
+            bchg.b #0 , (SRC_LOC)
             beq TEST_FAIL               /* branch if Z set*/
-            bchg.b #1 , (0x000F0101)       /* */
+            bchg.b #1 , (SRC_LOC+1)       /* */
             bne TEST_FAIL               /* branch if Z clear*/
-            bchg.b #7 , (0x000F0102)       /* */
+            bchg.b #7 , (SRC_LOC+2)       /* */
             beq TEST_FAIL               /* branch if Z set*/
             mov.l #0x00000100 , %a0      /* point to memory to address 0x100 */
             cmpi.b #0x01 , (%a0)+
@@ -313,17 +315,17 @@ op_BCHG:
             bne TEST_FAIL               /* branch if Z clear*/
                     
             /* EA = x.L  - BYTE only*/
-            mov.l #0x000F0100 , %a0      /* point to memory to address 0x100 */
+            mov.l #DST_LOC, %a0      /* point to memory to address 0x100 */
             mov.b #0x01 , (%a0)+         /* populate test data*/
             mov.b #0xFC , (%a0)+         /* populate test data*/
             mov.b #0x80 , (%a0)+         /* populate test data*/
-            bchg.b %d5 , (0x000F0100) 
+            bchg.b %d5 , (DST_LOC)
             beq TEST_FAIL               /* branch if Z set*/
-            bchg.b %d6 , (0x000F0101)       /* */
+            bchg.b %d6 , (DST_LOC+1)       /* */
             bne TEST_FAIL               /* branch if Z clear*/
-            bchg.b %d7 , (0x000F0102)       /* */
+            bchg.b %d7 , (DST_LOC+2)       /* */
             beq TEST_FAIL               /* branch if Z set*/
-            mov.l #0x000F0101 , %a0      /* point to memory to address 0x100 */
+            mov.l #DST_LOC+1, %a0      /* point to memory to address 0x100 */
             cmpi.b #0xFE , (%a0)
             bne TEST_FAIL               /* branch if Z clear*/
                     

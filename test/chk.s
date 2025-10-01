@@ -13,7 +13,6 @@ op_CHK:
             mov.w #0x1122, %d1
             chk #0x1122 , %d1 
                     
-    /* Comment out when using Easy68K*/
             mov.w #0x1122, %d1
             chk #00122 , %d1
             cmp.l #0xEEEE0006 , %d6

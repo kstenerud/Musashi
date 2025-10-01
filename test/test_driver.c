@@ -24,8 +24,9 @@ typedef struct memory_device_tag_t {
     void (*write32)(struct memory_device_tag_t*, uint32_t, uint32_t);
 } memory_device_t;
 
-#define BLOCK_SIZE 0x400
-#define MMAP_SIZE 0x400000
+#define BLOCK_SIZE 0x10000
+#define MMAP_SIZE 0x10000
+
 memory_device_t* memory_map[MMAP_SIZE];
 
 uint8_t read8_fail(memory_device_t*, uint32_t) {
@@ -146,7 +147,7 @@ void test_write32(memory_device_t* dev, uint32_t addr, uint32_t /*val*/) {
 void test_device_init(test_device_t* dev) {
     dev->test_pass_count = 0;
     dev->test_fail_count = 0;
-    dev->dev.mask = 0x400 - 1;
+    dev->dev.mask = 0x10000 - 1;
     dev->dev.read8 = test_read8;
     dev->dev.read16 = test_read16;
     dev->dev.read32 = test_read32;
@@ -157,7 +158,7 @@ void test_device_init(test_device_t* dev) {
 
 //
 // Ram slot
-#define RAM_SLOT_SIZE 0x400
+#define RAM_SLOT_SIZE 0x10000
 
 typedef struct ram_slot_tag_t {
     memory_device_t dev;
@@ -211,7 +212,7 @@ void ram_slot_init(ram_slot_t* dev) {
 
 //
 // Rom slot
-#define ROM_SLOT_SIZE 0x400
+#define ROM_SLOT_SIZE 0x10000
 
 typedef struct rom_slot_tag_t {
     memory_device_t dev;
@@ -247,7 +248,7 @@ void rom_slot_write32(memory_device_t* /*dev*/, uint32_t /*addr*/, uint32_t /*va
 }
 
 size_t rom_slot_init(rom_slot_t* dev, FILE* file) {
-    dev->dev.mask = RAM_SLOT_SIZE - 1;
+    dev->dev.mask = ROM_SLOT_SIZE - 1;
     dev->dev.read8 = rom_slot_read8;
     dev->dev.read16 = rom_slot_read16;
     dev->dev.read32 = rom_slot_read32;
@@ -262,11 +263,9 @@ size_t rom_slot_init(rom_slot_t* dev, FILE* file) {
 
 /// Devices
 ram_slot_t g_stack;
-#define N_EXTRA_RAM 4
-ram_slot_t g_extra_ram1[N_EXTRA_RAM];
-ram_slot_t g_extra_ram2[N_EXTRA_RAM];
+ram_slot_t g_extra_ram1;
 
-#define N_ROMS 128
+#define N_ROMS 4
 rom_slot_t g_roms[N_ROMS];
 
 test_device_t g_test_device;
@@ -276,14 +275,20 @@ void setup_memory() {
 
     memory_map_add(&g_stack.dev, 0x0, RAM_SLOT_SIZE);
     for (unsigned i = 0; i < N_ROMS; ++i)
-        memory_map_add(&g_roms[i].dev, ROM_SLOT_SIZE * i + RAM_SLOT_SIZE, ROM_SLOT_SIZE);
+        memory_map_add(&g_roms[i].dev, RAM_SLOT_SIZE + ROM_SLOT_SIZE * i, ROM_SLOT_SIZE);
+    memory_map_add(&g_extra_ram1.dev, 0x300000, RAM_SLOT_SIZE);
 
-    for (unsigned i = 0; i < 4; ++i)
-        memory_map_add(&g_extra_ram1[i].dev, RAM_SLOT_SIZE * i + 0x10000, RAM_SLOT_SIZE);
-    for (unsigned i = 0; i < 4; ++i)
-        memory_map_add(&g_extra_ram2[i].dev, RAM_SLOT_SIZE * i + 0xF0000, RAM_SLOT_SIZE);
+    memory_map_add(&g_test_device.dev, 0x100000, 0x10000);
+}
 
-    memory_map_add(&g_test_device.dev, 0x100000, 0x400);
+void setup_bootsec() {
+    // Deadbeef them all
+    for (int i = 0; i < 64; ++i)
+        m68k_write_memory_32(i * 4, 0xdeadbeef);
+
+    // Write the boot vectors
+    m68k_write_memory_32(0, 0x3F0);    // SP
+    m68k_write_memory_32(4, 0x10000);  // Entry
 }
 
 int main(int argc, char* argv[]) {
@@ -331,20 +336,15 @@ int main(int argc, char* argv[]) {
     }
 
     ram_slot_init(&g_stack);
-    fread(g_stack.memory, 1, RAM_SLOT_SIZE, infile);
-
-    for (unsigned i = 0; i < N_EXTRA_RAM; ++i) {
-        ram_slot_init(&g_extra_ram1[i]);
-        ram_slot_init(&g_extra_ram2[i]);
-    }
-
-    for (int i = 0; i < 128; ++i) {
+    ram_slot_init(&g_extra_ram1);
+    for (int i = 0; i < N_ROMS; ++i) {
         rom_slot_init(&g_roms[i], infile);
     }
 
     test_device_init(&g_test_device);
 
     setup_memory();
+    setup_bootsec();
 
     m68k_init();
     m68k_set_cpu_type(M68K_CPU_TYPE_68040);

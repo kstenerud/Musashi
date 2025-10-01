@@ -13,7 +13,7 @@ EXEPATH = ./
 .OFILES   = $(.CFILES:%.c=%.o)
 
 CC        = gcc
-WARNINGS  = -Wall -Wextra -pedantic
+WARNINGS  = -Wall -Wextra -pedantic -g
 CFLAGS    = $(WARNINGS)
 LFLAGS    = $(WARNINGS)
 

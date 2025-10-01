@@ -3,6 +3,10 @@
 /*-----------------------------------------------------------*/
 /*-----------------------------------------------------------*/
 op_MOVE: 
+        .set WORK_LOC,  STACK2_BASE-0x1000
+        .set WORK_LOCB, 0x100
+        .set WORK_LOC_HI, WORK_LOC>>16
+
             mov.l #0x11223344  , %d0
             mov.l #0x55667788  , %d1
             mov.l #0x8899aabb  , %d2
@@ -60,7 +64,8 @@ op_MOVE:
   /* Too mamy EA combinations to test, so we focus on a few of the more complicted EA's */
   
             mov.l #0x11223344  , %d0
-            mov.l #0x00010100  , %d1
+            /* We only use d1.w in the following, clobber the upper part*/
+            mov.l #WORK_LOCB+0xDEAD0000, %d1
             mov.l #0x8899aabb  , %d2
             mov.l #0x00000001  , %d3
             mov.l #0x00000000  , %d4
@@ -68,29 +73,30 @@ op_MOVE:
             mov.l #0x00000000  , %d6
             mov.l #0x00000000  , %d7         
             mov.l #0x00000000  , %a0
-            mov.l #0x00010100  , %a1
+            mov.l #WORK_LOC    , %a1
 
+MOVE_MEM:
     /* x(An,AL) --> x.L*/
             mov.b #0x5A , 4(%a0,%a1.l)    /* BYTE */
             lea 4(%a0,%a1.l) , %a3    
-            mov.b 4(%a0,%a1.l) , (0x00010105)    
+            mov.b 4(%a0,%a1.l) , (WORK_LOC+5)
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.b #0x5A , 5(%a0,%a1.l)                            
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                 
     /* x.L --> n(An,Dw)*/
-MOVE2:      mov.b  (0x00010105) , 7(%a0,%d1.w)    /* BYTE  */
+MOVE2:      mov.b  (WORK_LOC+5) , 7(%a0,%d1.w)    /* BYTE  */
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.b #0x5A , 7(%a0,%d1.w)                            
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                 
     /* x(%pc,Ds) --> x.w*/
-            mov.b  MOVE1(%pc,%d3), (0x0100) /* BYTE  */
+            mov.b  MOVE1(%pc,%d3), (WORK_LOCB) /* BYTE  */
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bpl TEST_FAIL                       /* Check N Flag  bmi/bpl*/
-            cmpi.b #0xB9 ,1+MOVE2                            
+            cmpi.b #0xB9 ,1+MOVE2               /* Make sure we tested the right opcode above*/
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                     
     /* #x -->    n(An,AL)*/
@@ -101,7 +107,7 @@ MOVE2:      mov.b  (0x00010105) , 7(%a0,%d1.w)    /* BYTE  */
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
         
             mov.l #0x11223344  , %d0
-            mov.l #0x00010100  , %d1
+            mov.l #WORK_LOCB+0xDEAD0000, %d1
             mov.l #0x8899aabb  , %d2
             mov.l #0x00000002  , %d3
             mov.l #0x00000000  , %d4
@@ -109,26 +115,26 @@ MOVE2:      mov.b  (0x00010105) , 7(%a0,%d1.w)    /* BYTE  */
             mov.l #0x00000000  , %d6
             mov.l #0x00000000  , %d7         
             mov.l #0x00000000  , %a0
-            mov.l #0x00010100  , %a1
+            mov.l #WORK_LOC    , %a1
             
     /* x(An,AL) --> x.L*/
             mov.w #0x5A5A , 4(%a0,%a1.l)    /* WORD  */
             lea 4(%a0,%a1.l) , %a4    
-            mov.w 4(%a0,%a1.l) , (0x00010104)    
+            mov.w 4(%a0,%a1.l) , (WORK_LOC+4)
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.w #0x5A5A , 4(%a0,%a1.l)                          
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                 
     /* x.L --> n(An,Dw)*/
-MOVE1:      mov.w  (0x00010104) , 6(%a0,%d1.w)    /* WORD  */
+MOVE1:      mov.w  (WORK_LOC+4) , 6(%a0,%d1.w)    /* WORD  */
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.w #0x5A5A , 6(%a0,%d1.w)                          
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                 
     /* x(%pc,Ds) --> x.w*/
-            mov.w  MOVE1(%pc,%d3), (0x0100) /* WORD  */
+            mov.w  MOVE1(%pc,%d3), (WORK_LOCB) /* WORD  */
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.w #0x31B9, MOVE1
@@ -144,7 +150,7 @@ MOVE1:      mov.w  (0x00010104) , 6(%a0,%d1.w)    /* WORD  */
 /* ---*/
         
             mov.l #0x11223344  , %d0
-            mov.l #0x00010100  , %d1
+            mov.l #WORK_LOCB+0xDEAD0000, %d1
             mov.l #0x8899aabb  , %d2
             mov.l #0x00000002  , %d3
             mov.l #0x00000000  , %d4
@@ -152,29 +158,29 @@ MOVE1:      mov.w  (0x00010104) , 6(%a0,%d1.w)    /* WORD  */
             mov.l #0x00000000  , %d6
             mov.l #0x00000000  , %d7         
             mov.l #0x00000000  , %a0
-            mov.l #0x00010100  , %a1
-            
+            mov.l #WORK_LOC    , %a1
+
     /* x(An,AL) --> x.L*/
             mov.l #0x5A5A1234 , 4(%a0,%a1.l)    /* LONG  */
             lea 4(%a0,%a1.l) , %a4    
-            mov.l 4(%a0,%a1.l) , (0x00010104)    
+            mov.l 4(%a0,%a1.l) , (WORK_LOC+4)
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.l #0x5A5A1234 , 4(%a0,%a1.l)                          
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                 
     /* x.L --> n(An,Dw)*/
-MOVE3:      mov.l  (0x00010104) , 6(%a0,%d1.w)    /* LONG  */
+MOVE3:      mov.l  (WORK_LOC+4) , 6(%a0,%d1.w)    /* LONG  */
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
             cmpi.l #0x5A5A1234 , 6(%a0,%d1.w)                          
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                 
     /* x(%pc,Ds) --> x.w*/
-            mov.l  MOVE3(%pc,%d3), (0x0100) /* LONG  */
+            mov.l  MOVE3(%pc,%d3), (WORK_LOCB) /* LONG  */
             beq TEST_FAIL                       /* Check Z Flag  beq/bne*/
             bmi TEST_FAIL                       /* Check N Flag  bmi/bpl*/
-            cmpi.l #0x21B90001 , MOVE3
+            cmpi.l #0x21B90000+WORK_LOC_HI, MOVE3          /* Ensure we tested the right opcode above*/
             bne TEST_FAIL                       /* Check Z Flag  beq/bne*/
                     
     /* #x -->    n(An,AL)*/
