@@ -58,4 +58,6 @@ TESTS_68040_RUN = $(TESTS_68040:%=%.bin)
 $(TESTS_68040_RUN): test_driver$(EXE)
 	./test_driver$(EXE) test/mc68040/$@
 
-test: $(TESTS_68000_RUN) $(TESTS_68040_RUN)
+build_tests:
+	@$(MAKE) -C test all
+test: build_tests $(TESTS_68000_RUN) $(TESTS_68040_RUN)
