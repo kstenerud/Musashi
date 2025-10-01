@@ -21,9 +21,12 @@ DELETEFILES = $(MUSASHIGENCFILES) $(MUSASHIGENHFILES) $(.OFILES) $(TARGET) $(MUS
 
 
 all: $(.OFILES)
+	@$(MAKE) -C test all
 
 clean:
 	rm -f $(DELETEFILES)
+	@$(MAKE) -C test clean
+
 
 m68kcpu.o: $(MUSASHIGENHFILES) m68kfpu.c m68kmmu.h softfloat/softfloat.c softfloat/softfloat.h
 
@@ -50,4 +53,4 @@ $(TESTS_68000_RUN): %.bin: test_driver$(EXE)
 	./test_driver$(EXE) test/$@
 
 
-tests: $(TESTS_68000_RUN)
+test: $(TESTS_68000_RUN)
