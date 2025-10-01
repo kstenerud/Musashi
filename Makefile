@@ -21,7 +21,6 @@ DELETEFILES = $(MUSASHIGENCFILES) $(MUSASHIGENHFILES) $(.OFILES) $(TARGET) $(MUS
 
 
 all: $(.OFILES)
-	@$(MAKE) -C test all
 
 clean:
 	rm -f $(DELETEFILES)
