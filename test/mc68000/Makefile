@@ -20,4 +20,3 @@ all: $(.TESTS_68000_BIN)
 .PHONY: clean
 clean:
 	rm -f $(.TESTS_68000_O)
-	rm -f $(.TESTS_68000_BIN)
