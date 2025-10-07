@@ -60,4 +60,4 @@ $(TESTS_68040_RUN): test_driver$(EXE)
 
 build_tests:
 	@$(MAKE) -C test all
-test: build_tests $(TESTS_68000_RUN) $(TESTS_68040_RUN)
+test: $(TESTS_68000_RUN) $(TESTS_68040_RUN)
