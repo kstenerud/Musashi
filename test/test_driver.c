@@ -6,10 +6,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-unsigned int m68k_read_disassembler_16 (unsigned int /*address*/) {
+unsigned int m68k_read_disassembler_16 (unsigned int address) {
+    (void)address;
     exit(EXIT_FAILURE);
 }
-unsigned int m68k_read_disassembler_32 (unsigned int /*address*/) {
+unsigned int m68k_read_disassembler_32 (unsigned int address) {
+    (void)address;
     exit(EXIT_FAILURE);
 }
 
@@ -29,25 +31,40 @@ typedef struct memory_device_tag_t {
 
 memory_device_t* memory_map[MMAP_SIZE];
 
-uint8_t read8_fail(memory_device_t*, uint32_t) {
+uint8_t read8_fail(memory_device_t* dev, uint32_t address) {
+    (void)dev;
+    (void)address;
     m68k_pulse_bus_error();
     return 0;
 }
-uint16_t read16_fail(memory_device_t*, uint32_t) {
+uint16_t read16_fail(memory_device_t* dev, uint32_t address) {
+    (void)dev;
+    (void)address;
     m68k_pulse_bus_error();
     return 0;
 }
-uint32_t read32_fail(memory_device_t*, uint32_t) {
+uint32_t read32_fail(memory_device_t* dev, uint32_t address) {
+    (void)dev;
+    (void)address;
     m68k_pulse_bus_error();
     return 0;
 }
-void write8_fail(memory_device_t*, uint32_t, uint8_t) {
+void write8_fail(memory_device_t* dev, uint32_t address, uint8_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
     m68k_pulse_bus_error();
 }
-void write16_fail(memory_device_t*, uint32_t, uint16_t) {
+void write16_fail(memory_device_t* dev, uint32_t address, uint16_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
     m68k_pulse_bus_error();
 }
-void write32_fail(memory_device_t*, uint32_t, uint32_t) {
+void write32_fail(memory_device_t* dev, uint32_t address, uint32_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
     m68k_pulse_bus_error();
 }
 
@@ -57,7 +74,7 @@ static memory_device_t mdev_not_mapped = {
     write8_fail, write16_fail, write32_fail
 };
 
-void memory_map_init() {
+void memory_map_init(void) {
     for (size_t i = 0; i < MMAP_SIZE; ++i) {
         memory_map[i] = &mdev_not_mapped;
     }
@@ -117,27 +134,44 @@ typedef struct test_device_tag_t {
     uint32_t test_fail_count;
 } test_device_t;
 
-uint8_t test_read8(memory_device_t*, uint32_t) { return 0; }
-uint16_t test_read16(memory_device_t*, uint32_t) { return 0; }
-uint32_t test_read32(memory_device_t*, uint32_t) { return 0; }
+uint8_t test_read8(memory_device_t* dev, uint32_t address) {
+    (void)dev;
+    (void)address;
+    return 0;
+}
+uint16_t test_read16(memory_device_t* dev, uint32_t address) {
+    (void)dev;
+    (void)address;
+    return 0;
+}
+uint32_t test_read32(memory_device_t* dev, uint32_t address) {
+    (void)dev;
+    (void)address;
+    return 0;
+}
 
-void test_write8(memory_device_t*, uint32_t addr, uint8_t val) {
-    if (addr == 0x14) {
-        char ss[2] = {val, 0};
+void test_write8(memory_device_t* dev, uint32_t address, uint8_t value) {
+    (void)dev;
+    if (address == 0x14) {
+        char ss[2] = {value, 0};
         puts(ss);
     }
 }
 
-void test_write16(memory_device_t*, uint32_t /*addr*/, uint16_t /*val*/) {}
+void test_write16(memory_device_t* dev, uint32_t address, uint16_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
+}
 
-void test_write32(memory_device_t* dev, uint32_t addr, uint32_t val) {
+void test_write32(memory_device_t* dev, uint32_t address, uint32_t value) {
     test_device_t* td = (test_device_t*)dev;
-    if (addr == 0x0)
+    if (address == 0x0)
         ++td->test_fail_count;
-    if (addr == 0x4)
+    if (address == 0x4)
         ++td->test_pass_count;
-    if (addr == 0xc) {
-        m68k_set_irq(val & 0x7);
+    if (address == 0xc) {
+        m68k_set_irq(value & 0x7);
         m68k_end_timeslice();
     }
 }
@@ -235,13 +269,22 @@ uint32_t rom_slot_read32(memory_device_t* dev, uint32_t addr) {
     (((uint32_t)rom_slot_read16(dev, addr + 0)) << 16) |
     (((uint32_t)rom_slot_read16(dev, addr + 2)) << 0);
 }
-void rom_slot_write8(memory_device_t* /*dev*/, uint32_t /*addr*/, uint8_t /*val*/) {
+void rom_slot_write8(memory_device_t* dev, uint32_t address, uint8_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
     m68k_pulse_bus_error();
 }
-void rom_slot_write16(memory_device_t* /*dev*/, uint32_t /*addr*/, uint16_t /*val*/) {
+void rom_slot_write16(memory_device_t* dev, uint32_t address, uint16_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
     m68k_pulse_bus_error();
 }
-void rom_slot_write32(memory_device_t* /*dev*/, uint32_t /*addr*/, uint32_t /*val*/) {
+void rom_slot_write32(memory_device_t* dev, uint32_t address, uint32_t value) {
+    (void)dev;
+    (void)address;
+    (void)value;
     m68k_pulse_bus_error();
 }
 
@@ -268,7 +311,7 @@ rom_slot_t g_roms[N_ROMS];
 
 test_device_t g_test_device;
 
-void setup_memory() {
+void setup_memory(void) {
     memory_map_init();
 
     memory_map_add(&g_stack.dev, 0x0, RAM_SLOT_SIZE);
@@ -279,7 +322,7 @@ void setup_memory() {
     memory_map_add(&g_test_device.dev, 0x100000, 0x10000);
 }
 
-void setup_bootsec() {
+void setup_bootsec(void) {
     // Deadbeef them all
     for (int i = 0; i < 64; ++i)
         m68k_write_memory_32(i * 4, 0xdeadbeef);
@@ -346,7 +389,7 @@ int main(int argc, char* argv[]) {
     printf("test_pass_count = %d\n", g_test_device.test_pass_count);
     printf("test_fail_count = %d\n", g_test_device.test_fail_count);
 
-    const bool pass =
-        (g_test_device.test_fail_count == 0 && g_test_device.test_pass_count > 0);
-    return pass ? 0 : EXIT_FAILURE;
+    if (g_test_device.test_fail_count == 0 && g_test_device.test_pass_count > 0)
+        return 0;
+    return EXIT_FAILURE;
 }
