@@ -359,10 +359,10 @@ static inline int TEST_CONDITION(int condition)
 	return r;
 }
 
-static uint8 READ_EA_8(int ea)
+static uint8 READ_EA_8(int arg_ea)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -425,10 +425,10 @@ static uint8 READ_EA_8(int ea)
 	return 0;
 }
 
-static uint16 READ_EA_16(int ea)
+static uint16 READ_EA_16(int arg_ea)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -492,10 +492,10 @@ static uint16 READ_EA_16(int ea)
 	return 0;
 }
 
-static uint32 READ_EA_32(int ea)
+static uint32 READ_EA_32(int arg_ea)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -562,10 +562,10 @@ static uint32 READ_EA_32(int ea)
 	return 0;
 }
 
-static uint64 READ_EA_64(int ea)
+static uint64 READ_EA_64(int arg_ea)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 	uint32 h1, h2;
 
 	switch (mode)
@@ -725,11 +725,11 @@ static floatx80 READ_EA_FPE(int mode, int reg, uint32 di_mode_ea)
 	return fpr;
 }
 
-static floatx80 READ_EA_PACK(int ea)
+static floatx80 READ_EA_PACK(int arg_ea)
 {
 	floatx80 fpr = {0};
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -779,10 +779,10 @@ static floatx80 READ_EA_PACK(int ea)
 	return fpr;
 }
 
-static void WRITE_EA_8(int ea, uint8 data)
+static void WRITE_EA_8(int arg_ea, uint8 data)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -847,10 +847,10 @@ static void WRITE_EA_8(int ea, uint8 data)
 	}
 }
 
-static void WRITE_EA_16(int ea, uint16 data)
+static void WRITE_EA_16(int arg_ea, uint16 data)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -915,10 +915,10 @@ static void WRITE_EA_16(int ea, uint16 data)
 	}
 }
 
-static void WRITE_EA_32(int ea, uint32 data)
+static void WRITE_EA_32(int arg_ea, uint32 data)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -988,10 +988,10 @@ static void WRITE_EA_32(int ea, uint32 data)
 	}
 }
 
-static void WRITE_EA_64(int ea, uint64 data)
+static void WRITE_EA_64(int arg_ea, uint64 data)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{
@@ -1124,10 +1124,10 @@ static void WRITE_EA_FPE(int mode, int reg, floatx80 fpr, uint32 di_mode_ea)
 	}
 }
 
-static void WRITE_EA_PACK(int ea, int k, floatx80 fpr)
+static void WRITE_EA_PACK(int arg_ea, int k, floatx80 fpr)
 {
-	int mode = (ea >> 3) & 0x7;
-	int reg = (ea & 0x7);
+	int mode = (arg_ea >> 3) & 0x7;
+	int reg = (arg_ea & 0x7);
 
 	switch (mode)
 	{

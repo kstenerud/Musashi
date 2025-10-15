@@ -605,6 +605,7 @@ typedef uint32 uint64;
 	#include <setjmp.h>
 
 /* sigjmp() on Mac OS X and *BSD in general saves signal contexts and is super-slow, use sigsetjmp() to tell it not to */
+extern int m68ki_initial_cycles;
 #ifdef _BSD_SETJMP_H
 extern sigjmp_buf m68ki_aerr_trap;
 #define m68ki_set_address_error_trap(m68k) \

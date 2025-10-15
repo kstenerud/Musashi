@@ -194,8 +194,8 @@ typedef struct
 /* All modifications necessary for a specific EA mode of an instruction */
 typedef struct
 {
-	char* fname_add;
-	char* ea_add;
+	const char* fname_add;
+	const char* ea_add;
 	unsigned int mask_add;
 	unsigned int match_add;
 } ea_info_struct;
@@ -230,7 +230,7 @@ int get_oper_cycles(opcode_struct* op, int ea_mode, int cpu_type);
 opcode_struct* find_opcode(char* name, int size, char* spec_proc, char* spec_ea);
 opcode_struct* find_illegal_opcode(void);
 int extract_opcode_info(char* src, char* name, int* size, char* spec_proc, char* spec_ea);
-void add_replace_string(replace_struct* replace, char* search_str, char* replace_str);
+void add_replace_string(replace_struct* replace, const char* search_str, const char* replace_str);
 void write_body(FILE* filep, body_struct* body, replace_struct* replace);
 void get_base_name(char* base_name, opcode_struct* op);
 void write_function_name(FILE* filep, char* base_name);
@@ -253,24 +253,24 @@ void read_insert(char* insert);
 /* ======================================================================== */
 
 /* Name of the input file */
-char g_input_filename[M68K_MAX_PATH] = FILENAME_INPUT;
+static char g_input_filename[M68K_MAX_PATH] = FILENAME_INPUT;
 
 /* File handles */
-FILE* g_input_file = NULL;
-FILE* g_prototype_file = NULL;
-FILE* g_table_file = NULL;
+static FILE* g_input_file = NULL;
+static FILE* g_prototype_file = NULL;
+static FILE* g_table_file = NULL;
 
-int g_num_functions = 0;  /* Number of functions processed */
-int g_num_primitives = 0; /* Number of function primitives read */
-int g_line_number = 1;    /* Current line number */
+static int g_num_functions = 0;  /* Number of functions processed */
+static int g_num_primitives = 0; /* Number of function primitives read */
+static int g_line_number = 1;    /* Current line number */
 
 /* Opcode handler table */
-opcode_struct g_opcode_input_table[MAX_OPCODE_INPUT_TABLE_LENGTH];
+static opcode_struct g_opcode_input_table[MAX_OPCODE_INPUT_TABLE_LENGTH];
 
-opcode_struct g_opcode_output_table[MAX_OPCODE_OUTPUT_TABLE_LENGTH];
-int g_opcode_output_table_length = 0;
+static opcode_struct g_opcode_output_table[MAX_OPCODE_OUTPUT_TABLE_LENGTH];
+static int g_opcode_output_table_length = 0;
 
-const ea_info_struct g_ea_info_table[13] =
+static const ea_info_struct g_ea_info_table[13] =
 {/* fname    ea        mask  match */
 	{"",     "",       0x00, 0x00}, /* EA_MODE_NONE */
 	{"ai",   "AY_AI",  0x38, 0x10}, /* EA_MODE_AI   */
@@ -288,7 +288,7 @@ const ea_info_struct g_ea_info_table[13] =
 };
 
 
-const char *const g_cc_table[16][2] =
+static const char *const g_cc_table[16][2] =
 {
 	{ "t",  "T"}, /* 0000 */
 	{ "f",  "F"}, /* 0001 */
@@ -309,7 +309,7 @@ const char *const g_cc_table[16][2] =
 };
 
 /* size to index translator (0 -> 0, 8 and 16 -> 1, 32 -> 2) */
-const int g_size_select_table[33] =
+static const int g_size_select_table[33] =
 {
 	0,												/* unsized */
 	0, 0, 0, 0, 0, 0, 0, 1,							/*    8    */
@@ -319,7 +319,7 @@ const int g_size_select_table[33] =
 
 /* Extra cycles required for certain EA modes */
 /* TODO: correct timings for 030, 040 */
-const int g_ea_cycle_table[13][NUM_CPUS][3] =
+static const int g_ea_cycle_table[13][NUM_CPUS][3] =
 {/*       000           010           020           030           040  */
 	{{ 0,  0,  0}, { 0,  0,  0}, { 0,  0,  0}, { 0,  0,  0}, { 0,  0,  0}}, /* EA_MODE_NONE */
 	{{ 0,  4,  8}, { 0,  4,  8}, { 0,  4,  4}, { 0,  4,  4}, { 0,  4,  4}}, /* EA_MODE_AI   */
@@ -337,7 +337,7 @@ const int g_ea_cycle_table[13][NUM_CPUS][3] =
 };
 
 /* Extra cycles for JMP instruction (000, 010) */
-const int g_jmp_cycle_table[13] =
+static const int g_jmp_cycle_table[13] =
 {
 	 0, /* EA_MODE_NONE */
 	 4, /* EA_MODE_AI   */
@@ -355,7 +355,7 @@ const int g_jmp_cycle_table[13] =
 };
 
 /* Extra cycles for JSR instruction (000, 010) */
-const int g_jsr_cycle_table[13] =
+static const int g_jsr_cycle_table[13] =
 {
 	 0, /* EA_MODE_NONE */
 	 4, /* EA_MODE_AI   */
@@ -373,7 +373,7 @@ const int g_jsr_cycle_table[13] =
 };
 
 /* Extra cycles for LEA instruction (000, 010) */
-const int g_lea_cycle_table[13] =
+static const int g_lea_cycle_table[13] =
 {
 	 0, /* EA_MODE_NONE */
 	 4, /* EA_MODE_AI   */
@@ -391,7 +391,7 @@ const int g_lea_cycle_table[13] =
 };
 
 /* Extra cycles for PEA instruction (000, 010) */
-const int g_pea_cycle_table[13] =
+static const int g_pea_cycle_table[13] =
 {
 	 0, /* EA_MODE_NONE */
 	 6, /* EA_MODE_AI   */
@@ -409,7 +409,7 @@ const int g_pea_cycle_table[13] =
 };
 
 /* Extra cycles for MOVEM instruction (000, 010) */
-const int g_movem_cycle_table[13] =
+static const int g_movem_cycle_table[13] =
 {
 	 0, /* EA_MODE_NONE */
 	 0, /* EA_MODE_AI   */
@@ -427,7 +427,7 @@ const int g_movem_cycle_table[13] =
 };
 
 /* Extra cycles for MOVES instruction (010) */
-const int g_moves_cycle_table[13][3] =
+static const int g_moves_cycle_table[13][3] =
 {
 	{ 0,  0,  0}, /* EA_MODE_NONE */
 	{ 0,  4,  6}, /* EA_MODE_AI   */
@@ -445,7 +445,7 @@ const int g_moves_cycle_table[13][3] =
 };
 
 /* Extra cycles for CLR instruction (010) */
-const int g_clr_cycle_table[13][3] =
+static const int g_clr_cycle_table[13][3] =
 {
 	{ 0,  0,  0}, /* EA_MODE_NONE */
 	{ 0,  4,  6}, /* EA_MODE_AI   */
@@ -517,7 +517,7 @@ int check_strsncpy(char* dst, char* src, int maxlength)
 }
 
 /* copy until 0 or specified character and exit with error if we read too far */
-int check_strcncpy(char* dst, char* src, char delim, int maxlength)
+static int check_strcncpy(char* dst, char* src, char delim, int maxlength)
 {
 	char* p = dst;
 	while(*src && *src != delim)
@@ -722,7 +722,7 @@ int extract_opcode_info(char* src, char* name, int* size, char* spec_proc, char*
 
 
 /* Add a search/replace pair to a replace structure */
-void add_replace_string(replace_struct* replace, char* search_str, char* replace_str)
+void add_replace_string(replace_struct* replace, const char* search_str, const char* replace_str)
 {
 	if(replace->length >= MAX_REPLACE_LENGTH)
 		error_exit("overflow in replace structure");

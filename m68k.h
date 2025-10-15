@@ -293,7 +293,11 @@ void m68k_set_fc_callback(void  (*callback)(unsigned int new_fc));
  */
 void m68k_set_instr_hook_callback(void  (*callback)(unsigned int pc));
 
+void m68k_set_cmpild_instr_callback(void  (*callback)(unsigned int, int));
 
+void m68k_set_cmpild_instr_callback(void  (*callback)(unsigned int, int));
+
+void m68k_set_rte_instr_callback(void  (*callback)(void));
 
 /* ======================================================================== */
 /* ====================== FUNCTIONS TO ACCESS THE CPU ===================== */

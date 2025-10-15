@@ -167,7 +167,6 @@ M68KMAKE_TABLE_FOOTER
 void m68ki_build_opcode_table(void)
 {
 	const opcode_handler_struct *ostruct;
-	int cycle_cost;
 	int instr;
 	int i;
 	int j;
@@ -221,6 +220,7 @@ void m68ki_build_opcode_table(void)
 				{
 					// On the 68000 and 68010 shift distance affect execution time.
 					// Add the cycle cost of shifting; 2 times the shift distance
+					int cycle_cost;
 					cycle_cost = ((((i-1)&7)+1)<<1);
 					m68ki_cycles[0][instr] += cycle_cost;
 					m68ki_cycles[1][instr] += cycle_cost;

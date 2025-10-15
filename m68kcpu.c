@@ -60,7 +60,7 @@ int  m68ki_remaining_cycles = 0;                     /* Number of clocks remaini
 uint m68ki_tracing = 0;
 uint m68ki_address_space;
 
-#ifdef M68K_LOG_ENABLE
+#if M68K_LOG_ENABLE
 const char *const m68ki_cpu_names[] =
 {
 	"Invalid CPU",
