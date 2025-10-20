@@ -2476,10 +2476,7 @@ M68KMAKE_OP(bfchg, 32, ., .)
 		sint offset = (word2>>6)&31;
 		uint width = word2;
 		uint mask_base;
-		uint data_long;
 		m68ki_bitfield_t data;
-		uint data_byte = 0;
-		uint mask_byte = 0;
 		uint ea = M68KMAKE_GET_EA_AY_8;
 
 
@@ -2554,7 +2551,6 @@ M68KMAKE_OP(bfclr, 32, ., .)
 		uint width = word2;
 		uint mask_base;
 		m68ki_bitfield_t data;
-		uint mask_byte = 0;
 		uint ea = M68KMAKE_GET_EA_AY_8;
 
 
