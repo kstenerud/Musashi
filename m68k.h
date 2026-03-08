@@ -275,6 +275,14 @@ void m68k_set_tas_instr_callback(int  (*callback)(void));
  */
 void m68k_set_illg_instr_callback(int  (*callback)(int));
 
+/* Set the callback for TRAP instructions.
+ * You must enable M68K_TRAP_HAS_CALLBACK in m68kconf.h.
+ * The CPU calls this callback every time it encounters a TRAP instruction
+ * which must return 1 if it handles the instruction or 0 if it's to be handled on the CPU.
+ * Default behavior: return 0, exception will occur.
+ */
+void m68k_set_trap_instr_callback(int  (*callback)(int));
+
 /* Set the callback for CPU function code changes.
  * You must enable M68K_EMULATE_FC in m68kconf.h.
  * The CPU calls this callback with the function code before every memory

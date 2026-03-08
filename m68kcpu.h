@@ -394,6 +394,7 @@ typedef uint32 uint64;
 #define CALLBACK_RTE_INSTR    m68ki_cpu.rte_instr_callback
 #define CALLBACK_TAS_INSTR    m68ki_cpu.tas_instr_callback
 #define CALLBACK_ILLG_INSTR    m68ki_cpu.illg_instr_callback
+#define CALLBACK_TRAP_INSTR  m68ki_cpu.trap_instr_callback
 #define CALLBACK_PC_CHANGED  m68ki_cpu.pc_changed_callback
 #define CALLBACK_SET_FC      m68ki_cpu.set_fc_callback
 #define CALLBACK_INSTR_HOOK  m68ki_cpu.instr_hook_callback
@@ -541,6 +542,16 @@ typedef uint32 uint64;
 #else
 	#define m68ki_illg_callback(opcode) 0 // Default is 0 = not handled, exception will occur
 #endif /* M68K_ILLG_HAS_CALLBACK */
+
+#if M68K_TRAP_HAS_CALLBACK
+	#if M68K_TRAP_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
+		#define m68ki_trap_callback(trap) M68K_TRAP_CALLBACK(trap)
+	#else
+		#define m68ki_trap_callback(trap) CALLBACK_TRAP_INSTR(trap)
+	#endif
+#else
+	#define m68ki_trap_callback(opcode) 0 // Default is 0 = not handled, exception will occur
+#endif /* M68K_TRAP_HAS_CALLBACK */
 
 #if M68K_INSTRUCTION_HOOK
 	#if M68K_INSTRUCTION_HOOK == M68K_OPT_SPECIFY_HANDLER
@@ -998,6 +1009,7 @@ typedef struct
  	void (*rte_instr_callback)(void);                 /* Called when a RTE instruction is encountered */
 	int  (*tas_instr_callback)(void);                 /* Called when a TAS instruction is encountered, allows / disallows writeback */
 	int  (*illg_instr_callback)(int);                 /* Called when an illegal instruction is encountered, allows handling */
+	int  (*trap_instr_callback)(int);                 /* Called when a TRAP instruction is encountered, allows handling */
 	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
 	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
 	void (*instr_hook_callback)(unsigned int pc);     /* Called every instruction cycle prior to execution */
@@ -1854,6 +1866,15 @@ static inline void m68ki_exception_trap(uint vector)
 /* Trap#n stacks a 0 frame but behaves like group2 otherwise */
 static inline void m68ki_exception_trapN(uint vector)
 {
+	uint t = REG_IR & 0xf;
+#if M68K_LOG_TRAP == M68K_OPT_ON
+	M68K_DO_LOG((M68K_LOG_FILEHANDLE "%s at %08x: trap %01x (%s)\n",
+				 m68ki_cpu_names[CPU_TYPE], ADDRESS_68K(REG_PPC), t,
+				 m68ki_disassemble_quick(ADDRESS_68K(REG_PPC))));
+#endif
+	if (m68ki_trap_callback(t))
+	    return;
+
 	uint sr = m68ki_init_exception();
 	m68ki_stack_frame_0000(REG_PC, sr, vector);
 	m68ki_jump_vector(vector);
@@ -1989,6 +2010,10 @@ static inline void m68ki_exception_1111(void)
 
 #if M68K_ILLG_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
 extern int m68ki_illg_callback(int);
+#endif
+
+#if M68K_TRAP_HAS_CALLBACK == M68K_OPT_SPECIFY_HANDLER
+extern int m68ki_trap_callback(int);
 #endif
 
 /* Exception for illegal instructions */
