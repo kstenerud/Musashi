@@ -1171,7 +1171,7 @@ void m68k_set_context(void* src)
 /* ============================== MAME STUFF ============================== */
 /* ======================================================================== */
 
-#if M68K_COMPILE_FOR_MAME == OPT_ON
+#if M68K_COMPILE_FOR_MAME == M68K_OPT_ON
 
 static struct {
 	UINT16 sr;

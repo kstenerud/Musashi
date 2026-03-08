@@ -104,7 +104,7 @@ handling.
 
 To add proper interrupt handling:
 
-- In m68kconf.h, set M68K_EMULATE_INT_ACK to OPT_SPECIFY_HANDLER
+- In m68kconf.h, set M68K_EMULATE_INT_ACK to M68K_OPT_SPECIFY_HANDLER
 
 - In m68kconf.h, set M68K_INT_ACK_CALLBACK(A) to your interrupt acknowledge
   routine
@@ -153,8 +153,8 @@ To enable separate immediate reads:
     unsigned int  m68k_read_pcrelative_32(unsigned int address);
 
 - If you need to know the current PC (for banking and such), set
-  M68K_MONITOR_PC to OPT_SPECIFY_HANDLER, and set M68K_SET_PC_CALLBACK(A) to
-  your routine.
+  M68K_MONITOR_PC to M68K_OPT_SPECIFY_HANDLER, and set M68K_SET_PC_CALLBACK(A)
+  to your routine.
 
 - In the unlikely case where you need to emulate some PMMU in the immediate
   reads and/or pcrealtive stuff, you'll need to explicitely call the
@@ -195,7 +195,7 @@ function code pins:
 
 To emulate the function code pins:
 
-- In m68kconf.h, set M68K_EMULATE_FC to OPT_SPECIFY_HANDLER and set
+- In m68kconf.h, set M68K_EMULATE_FC to M68K_OPT_SPECIFY_HANDLER and set
   M68K_SET_FC_CALLBACK(A) to your function code handler function.
 
 - Your function code handler should select the proper address space for
@@ -291,9 +291,9 @@ MULTIPLE CPU EMULATION:
 The default is to use only one CPU.  To use more than one CPU in this core,
 there are some things to keep in mind:
 
-- To have different cpus call different functions, use OPT_ON instead of
-  OPT_SPECIFY_HANDLER, and use the m68k_set_xxx_callback() functions to set
-  your callback handlers on a per-cpu basis.
+- To have different cpus call different functions, use M68K_OPT_ON instead of
+  M68K_OPT_SPECIFY_HANDLER, and use the m68k_set_xxx_callback() functions to
+  set your callback handlers on a per-cpu basis.
 
 - Be sure to call set_cpu_type() for each CPU you use.
 

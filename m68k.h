@@ -34,8 +34,8 @@
 extern "C" {
 #endif
 
-#ifndef ARRAY_LENGTH
-#define ARRAY_LENGTH(x)         (sizeof(x) / sizeof(x[0]))
+#ifndef M68K_ARRAY_LENGTH
+#define M68K_ARRAY_LENGTH(x)         (sizeof(x) / sizeof(x[0]))
 #endif
 
 #ifndef FALSE
@@ -394,7 +394,7 @@ unsigned int m68k_disassemble_raw(char* str_buff, unsigned int pc, const unsigne
 /* ============================== MAME STUFF ============================== */
 /* ======================================================================== */
 
-#if M68K_COMPILE_FOR_MAME == OPT_ON
+#if M68K_COMPILE_FOR_MAME == M68K_OPT_ON
 #include "m68kmame.h"
 #endif /* M68K_COMPILE_FOR_MAME */
 

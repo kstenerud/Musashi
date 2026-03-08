@@ -138,7 +138,7 @@
 
 
 /* Opcode flags */
-#if M68K_COMPILE_FOR_MAME == OPT_ON
+#if M68K_COMPILE_FOR_MAME == M68K_OPT_ON
 #define SET_OPCODE_FLAGS(x)	g_opcode_type = x;
 #define COMBINE_OPCODE_FLAGS(x) ((x) | g_opcode_type | DASMFLAG_SUPPORTED)
 #else
@@ -3685,10 +3685,10 @@ static void build_opcode_table(void)
 	uint i;
 	uint opcode;
 	opcode_struct* ostruct;
-	opcode_struct opcode_info[ARRAY_LENGTH(g_opcode_info)];
+	opcode_struct opcode_info[M68K_ARRAY_LENGTH(g_opcode_info)];
 
 	memcpy(opcode_info, g_opcode_info, sizeof(g_opcode_info));
-	qsort((void *)opcode_info, ARRAY_LENGTH(opcode_info)-1, sizeof(opcode_info[0]), compare_nof_true_bits);
+	qsort((void *)opcode_info, M68K_ARRAY_LENGTH(opcode_info)-1, sizeof(opcode_info[0]), compare_nof_true_bits);
 
 	for(i=0;i<0x10000;i++)
 	{
