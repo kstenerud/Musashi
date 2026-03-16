@@ -373,7 +373,7 @@ void output_device_reset(void)
 
 void output_device_update(void)
 {
-	if(!g_output_device_ready)
+	if(g_output_device_ready)
 	{
 		if((time(NULL) - g_output_device_last_output) >= OUTPUT_DEVICE_PERIOD)
 		{
